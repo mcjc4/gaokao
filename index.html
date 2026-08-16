@@ -285,8 +285,10 @@ let celebrateLevel=(localStorage.getItem(CELE_KEY)||"fancy");
 if(!["off","light","fancy"].includes(celebrateLevel))celebrateLevel="fancy";
 function setCelebrateLevel(v){if(!["off","light","fancy"].includes(v))v="fancy";celebrateLevel=v;try{localStorage.setItem(CELE_KEY,v);}catch(e){}}
 const DAILY_KEY="gaokao_daily_target";
-let dailyTargetMins=Math.max(0,Number(localStorage.getItem(DAILY_KEY))||600);
-function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(DAILY_KEY,String(dailyTargetMins));}catch(e){}}
+function dailyKey(){return curExec===0?"gaokao_daily_target":"gaokao_daily_target_chenzihan";}
+function defaultDaily(){return curExec===0?600:300;}
+let dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
+function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}
 const REMIND_KEY="gaokao_reminder";
 let reminderEnabled=(localStorage.getItem(REMIND_KEY)||"1")==="1";
 let reminderOverlayOpen=false,lastReminderTs=0,reminderTimer=null;
@@ -473,6 +475,7 @@ function switchExecutor(i){
   curExec=i;try{localStorage.setItem("gaokao_exec_id",String(curExec));}catch(e){}
   executorName=localStorage.getItem("gaokao_exec_name_"+curCfg().id)||curCfg().name;
   affirmation=localStorage.getItem(affirmKey())||"";
+  dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
   load();
   document.title=executorName+"-高考学习目标管理台";
   updateExecNav();
@@ -1104,7 +1107,7 @@ function renderMine(){
       </div>
       <div style="margin-top:14px">
         <label style="font-size:13px;font-weight:700">每天打卡时长目标（分钟）</label>
-        <div class="hint" style="margin:4px 0 6px">用于今日页「打卡剩余时长」计算（剩余 = 目标 − 当天已勾选时长），默认 600。</div>
+        <div class="hint" style="margin:4px 0 6px">用于今日页「打卡剩余时长」计算（剩余 = 目标 − 当天已勾选时长）。每个执行人单独设置：${executorName} 当前目标 ${dailyTargetMins} 分钟（默认：陈昕言 600 / 陈梓涵 300）。</div>
         <div class="row-inline">
           <input id="daily-target" type="number" min="0" step="10" value="${dailyTargetMins}" style="flex:1;font-size:14px">
           <button class="btn primary sm" data-act="save-daily">保存</button>

@@ -349,18 +349,20 @@ function pushCheckinNotify(cur){
   const mins=todayCheckedMins();
   const remain=Math.max(0,dailyTargetMins-mins);
   let wrong=0;S.goals.forEach(g=>g.records.forEach(r=>{if(r.date===t)wrong+=(r.wrongCount||0);}));
-  const lines=["【学习打卡提醒】"];
+  const pushTitle=(executorName||"我")+"打卡了";
+  const lines=[pushTitle];
   if(cur&&cur.sub){
     lines.push("✅ 本次打卡："+(cur.subject?("【"+cur.subject+"】"):"")+cur.sub);
     if(cur.minutes)lines.push("   学习 "+cur.minutes+" 分钟");
     if(cur.wrongCount>0)lines.push("   错题 "+cur.wrongCount+" 道"+(cur.wrongType?("（"+cur.wrongType+"）"):""));
     lines.push("———————————");
   }else{
-    lines.push((executorName||"我")+" 今日已完成打卡");
+    lines.push("今日已完成打卡");
   }
   lines.push("📊 今日合计");
   lines.push("已打卡 "+mins+" 分钟"+(dailyTargetMins>0?("（目标 "+dailyTargetMins+"，还差 "+remain+" 分钟达标）"):""));
   lines.push("今日错题 "+wrong+" 道");
+  if(affirmation)lines.push("📌 今日约定："+affirmation);
   lines.push("保持节奏，继续加油 💪");
   const text=lines.join("\n");
   const viaProxy=(finalTarget,finalPayload)=>{
@@ -385,7 +387,7 @@ function pushCheckinNotify(cur){
   }
   // 微信 PushPlus
   if(hasPP){
-    const pp={token:pushToken,title:"【学习打卡提醒】",content:text,template:"txt"};
+    const pp={token:pushToken,title:pushTitle,content:text,template:"txt"};
     if(pushTopic)pp.topic=pushTopic;
     fetch("https://www.pushplus.plus/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(pp)}).catch(()=>{});
   }

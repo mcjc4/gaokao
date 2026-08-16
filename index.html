@@ -244,6 +244,10 @@
 
 <nav class="nav" id="nav">
   <div class="brand"><span class="logo"><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v5h5"/><path d="M8 13l2 2 4-4"/></svg></span><span>学习目标台</span></div>
+  <div class="exec-switch" style="display:flex;gap:6px;padding:2px 10px 6px">
+    <button class="btn ${curExec===0?'primary':'ghost'} sm exec-sw" data-act="switch-exec" data-i="0" style="flex:1">陈昕言</button>
+    <button class="btn ${curExec===1?'primary':'ghost'} sm exec-sw" data-act="switch-exec" data-i="1" style="flex:1">陈梓涵</button>
+  </div>
   <button data-act="tab" data-tab="today" class="active"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M9 14l2 2 4-4"/></svg>今日</button>
   <button data-act="tab" data-tab="board"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="11" rx="1.5"/></svg>看板</button>
   <button data-act="tab" data-tab="week"><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 19v-6M12 19v-9M16 19v-4"/></svg>周报</button>
@@ -266,8 +270,16 @@
 /* ===================== 工具 ===================== */
 const STORE_KEY="gaokao_goal_tracker_v3";
 const EXEC_KEY="gaokao_exec_name";
-let executorName=localStorage.getItem(EXEC_KEY)||"陈昕言";
-function setExecutorName(n){executorName=n;try{localStorage.setItem(EXEC_KEY,n);}catch(e){}document.title=executorName+"-高考学习目标管理台";}
+const EXECUTORS=[
+  {id:"chenxinyan",name:"陈昕言",storeKey:"gaokao_goal_tracker_v3",cloudId:"main"},
+  {id:"chenzihan",name:"陈梓涵",storeKey:"gaokao_goal_tracker_v3_chenzihan",cloudId:"chenzihan"}
+];
+let curExec=Math.min(1,Math.max(0,Number(localStorage.getItem("gaokao_exec_id")||"0")||0));
+function curCfg(){return EXECUTORS[curExec]||EXECUTORS[0];}
+function curStoreKey(){return curCfg().storeKey;}
+function curCloudId(){return curCfg().cloudId;}
+let executorName=localStorage.getItem("gaokao_exec_name_"+curCfg().id)||(curExec===0?localStorage.getItem(EXEC_KEY):"")||curCfg().name;
+function setExecutorName(n){executorName=n;try{localStorage.setItem("gaokao_exec_name_"+curCfg().id,n);}catch(e){}document.title=executorName+"-高考学习目标管理台";}
 const ANIM_KEY="gaokao_anim_ms";
 let animDuration=Math.max(200,Number(localStorage.getItem(ANIM_KEY))||1000);
 function setAnimDuration(ms){animDuration=Math.max(200,Number(ms)||1000);try{localStorage.setItem(ANIM_KEY,String(animDuration));}catch(e){}}
@@ -305,8 +317,9 @@ const AUTOREFRESH_KEY="gaokao_auto_refresh";
 let autoRefreshEnabled=(localStorage.getItem(AUTOREFRESH_KEY)||"1")==="1";
 function setAutoRefreshEnabled(v){autoRefreshEnabled=!!v;try{localStorage.setItem(AUTOREFRESH_KEY,autoRefreshEnabled?"1":"0");}catch(e){}}
 const AFFIRM_KEY="gaokao_affirmation";
-let affirmation=localStorage.getItem(AFFIRM_KEY)||"";
-function setAffirmation(v){affirmation=(v||"").trim();try{localStorage.setItem(AFFIRM_KEY,affirmation);}catch(e){}}
+function affirmKey(){return curExec===0?"gaokao_affirmation":"gaokao_affirmation_chenzihan";}
+let affirmation=localStorage.getItem(affirmKey())||"";
+function setAffirmation(v){affirmation=(v||"").trim();try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}
 const PUSH_KEY="gaokao_push_on";
 const DEFAULT_PUSH_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=f18b56e9a884bdd2c9a933e1994ad7856ba0e1fce2404d366589a218c1683f1e";
 const DEFAULT_PUSH_PROXY="https://young-hat-353c.mcjc4.workers.dev/";
@@ -330,6 +343,13 @@ function setPushToken(v){pushToken=(v||"").trim();try{localStorage.setItem("gaok
 function setPushTopic(v){pushTopic=(v||"").trim();try{localStorage.setItem("gaokao_push_topic",pushTopic);}catch(e){}}
 function setPushSecret(v){pushSecret=(v||"").trim();try{localStorage.setItem("gaokao_push_secret",pushSecret);}catch(e){}}
 function setPushProxy(v){pushProxy=(v||"").trim();try{localStorage.setItem("gaokao_push_proxy",pushProxy);}catch(e){}}
+function updateExecSwitch(){
+  document.querySelectorAll(".exec-sw").forEach(b=>{
+    const on=Number(b.dataset.i)===curExec;
+    b.classList.toggle("primary",on);
+    b.classList.toggle("ghost",!on);
+  });
+}
 async function dingSign(secret){
   const timestamp=Date.now();
   const str=timestamp+"\n"+secret;
@@ -448,8 +468,23 @@ function migrate(s){
   s.weeklyNotes=s.weeklyNotes||{};
   return s;
 }
-function load(){try{const raw=localStorage.getItem(STORE_KEY);if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
-function save(){try{S.updatedAt=Date.now();localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
+function switchExecutor(i){
+  if(i===curExec)return;
+  if(localStorage.getItem(curStoreKey()))save();
+  curExec=i;try{localStorage.setItem("gaokao_exec_id",String(curExec));}catch(e){}
+  executorName=localStorage.getItem("gaokao_exec_name_"+curCfg().id)||curCfg().name;
+  affirmation=localStorage.getItem(affirmKey())||"";
+  load();
+  document.title=executorName+"-高考学习目标管理台";
+  updateExecSwitch();
+  render();
+  if(cloudCfg&&cloudCfg.url&&cloudCfg.key&&!cloudCfg.disabled){
+    cloudReady=false;cloudStatus='connecting';renderMineSafe();
+    pullCloud(false,true).then(()=>{cloudReady=true;cloudStatus='online';renderMineSafe();}).catch(()=>{cloudStatus='error';renderMineSafe();});
+  }
+}
 
 /* ===================== 云端共享（Supabase REST API） =====================
  * 共享同一份数据：所有人通过 Supabase REST API 读写 gaokao_state 表。
@@ -458,8 +493,7 @@ function save(){try{S.updatedAt=Date.now();localStorage.setItem(STORE_KEY,JSON.s
  */
 const CLOUD_CFG_KEY="gaokao_cloud_cfg";
 const CLOUD_TABLE="gaokao_state";
-const CLOUD_DOC_ID="main";
-const CLOUD_SYNC_KEY="gaokao_cloud_sync_at";
+const CLOUD_DOC_ID="main";const CLOUD_SYNC_KEY="gaokao_cloud_sync_at";
 function cloudSyncAt(){return Number(localStorage.getItem(CLOUD_SYNC_KEY))||0;}
 function setCloudSyncAt(ts){try{localStorage.setItem(CLOUD_SYNC_KEY,String(ts));}catch(e){}}
 // 内置默认云端配置：新机器第一次打开网页即可直接连接，无需手动填写
@@ -513,7 +547,7 @@ async function pushCloud(){
   try{
     const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}`;
     const headers=Object.assign(sbHeaders(cloudCfg.key,true),{'Prefer':'resolution=merge-duplicates'});
-    const body=JSON.stringify({id:CLOUD_DOC_ID,data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()});
+    const body=JSON.stringify({id:curCloudId(),data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()});
     const res=await fetch(url,{method:'POST',headers,body});
     if(!res.ok)throw new Error('http '+res.status);
     setCloudSyncAt(S.updatedAt||Date.now());
@@ -523,7 +557,7 @@ async function pullCloud(silent, force){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
   if(cloudCfg.disabled)return;
   try{
-    const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}?id=eq.${CLOUD_DOC_ID}&select=*`;
+    const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}?id=eq.${curCloudId()}&select=*`;
     const headers=sbHeaders(cloudCfg.key);
     const res=await fetch(url,{method:'GET',headers});
     if(!res.ok)throw new Error('http '+res.status);
@@ -544,7 +578,7 @@ async function pullCloud(silent, force){
 async function fetchCloudMeta(){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key||cloudCfg.disabled)return null;
   try{
-    const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}?id=eq.${CLOUD_DOC_ID}&select=updated_at`;
+    const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}?id=eq.${curCloudId()}&select=updated_at`;
     const res=await fetch(url,{method:'GET',headers:sbHeaders(cloudCfg.key)});
     if(!res.ok)throw new Error('http '+res.status);
     const rows=await res.json();
@@ -1728,6 +1762,7 @@ document.addEventListener("click",e=>{
   const el=e.target.closest("[data-act]");if(!el)return;
   const act=el.dataset.act,id=el.dataset.id;
   if(act==="tab"){curTab=el.dataset.tab;[...document.querySelectorAll(".nav button")].forEach(b=>b.classList.toggle("active",b.dataset.tab===curTab));render();return;}
+  if(act==="switch-exec"){switchExecutor(Number(el.dataset.i));return;}
   if(act==="new"){openGoalModal(null);return;}
   if(act==="edit"){openGoalModal(id);return;}
   if(act==="save-exec"){
@@ -2149,7 +2184,7 @@ function badgePop(){
 
 /* ===================== 启动 ===================== */
 document.title=executorName+"-高考学习目标管理台";
-load();render();initCloud();startReminder();startAutoRefresh();
+load();render();initCloud();startReminder();startAutoRefresh();updateExecSwitch();
 </script>
 </body>
 </html>

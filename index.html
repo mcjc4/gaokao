@@ -443,7 +443,7 @@ function migrate(s){
   s.weeklyNotes=s.weeklyNotes||{};
   return s;
 }
-function load(){try{const raw=localStorage.getItem(STORE_KEY);if(!raw){S=buildPreset();freshPreset=true;save();}else S=migrate(JSON.parse(raw));}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(STORE_KEY);if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 
 /* ===================== 云端共享（Supabase REST API） =====================
@@ -651,6 +651,7 @@ let curTab="today";
 let viewDate=todayStr();
 let manageSearch="";
 let manageFilter="all";
+let manageSort={col:"date",dir:"desc"};
 function render(){
   document.title=executorName+"-高考学习目标管理台";
   const tb=document.querySelector(".topbar h1");if(tb)tb.textContent=executorName+"-高考学习目标管理台";
@@ -948,7 +949,16 @@ function renderManage(){
     }
     return true;
   });
-  list.sort((a,b)=>(b.s.date+b.g.name).localeCompare(a.s.date+a.g.name));
+  const sortArrow=(c)=>manageSort.col===c?(manageSort.dir==="asc"?" ▲":" ▼"):"";
+  const dir=manageSort.dir==="asc"?1:-1;
+  list.sort((a,b)=>{
+    const c=manageSort.col;
+    const va=c==="sub"?a.s.sub:c==="g"?a.g.name:c==="material"?(a.s.material||""):c==="mins"?(a.s.mins||0):c==="checked"?a.checked:a.s.date;
+    const vb=c==="sub"?b.s.sub:c==="g"?b.g.name:c==="material"?(b.s.material||""):c==="mins"?(b.s.mins||0):c==="checked"?b.checked:b.s.date;
+    if(va<vb)return -1*dir;
+    if(va>vb)return 1*dir;
+    return 0;
+  });
 
   let html=`<h3 style="margin:0 0 4px">任务管理</h3>
     <div class="hint" style="margin-bottom:14px">扁平查看与管理全部子任务，支持搜索、按学科筛选、批量删除。学科本身请用「新建目标」。</div>
@@ -973,12 +983,12 @@ function renderManage(){
         <thead><tr style="text-align:left;color:var(--muted);font-size:12px">
           <th style="padding:8px 6px;width:34px"><input type="checkbox" id="mg-select-all" data-act="mg-select-all" title="全选"></th>
           <th style="padding:8px 6px;width:40px">#</th>
-          <th style="padding:8px 6px">任务名称</th>
-          <th style="padding:8px 6px;width:110px">学科</th>
-          <th style="padding:8px 6px">出处</th>
-          <th style="padding:8px 6px;width:70px;text-align:right">时长</th>
-          <th style="padding:8px 6px;width:100px">日期</th>
-          <th style="padding:8px 6px;width:70px;text-align:center">已打卡</th>
+          <th style="padding:8px 6px;cursor:pointer;user-select:none" onclick="manageSortToggle('sub')">任务名称${sortArrow('sub')}</th>
+          <th style="padding:8px 6px;width:110px;cursor:pointer;user-select:none" onclick="manageSortToggle('g')">学科${sortArrow('g')}</th>
+          <th style="padding:8px 6px;cursor:pointer;user-select:none" onclick="manageSortToggle('material')">出处${sortArrow('material')}</th>
+          <th style="padding:8px 6px;width:70px;text-align:right;cursor:pointer;user-select:none" onclick="manageSortToggle('mins')">时长${sortArrow('mins')}</th>
+          <th style="padding:8px 6px;width:100px;cursor:pointer;user-select:none" onclick="manageSortToggle('date')">日期${sortArrow('date')}</th>
+          <th style="padding:8px 6px;width:70px;text-align:center;cursor:pointer;user-select:none" onclick="manageSortToggle('checked')">已打卡${sortArrow('checked')}</th>
           <th style="padding:8px 6px;width:110px">操作</th>
         </tr></thead>
         <tbody>`;
@@ -1695,6 +1705,11 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
   if(e.target.id==="manage-filter"){manageFilter=e.target.value;renderManage();}
 });
+function manageSortToggle(col){
+  if(manageSort.col===col){manageSort.dir=manageSort.dir==="asc"?"desc":"asc";}
+  else{manageSort.col=col;manageSort.dir=(col==="sub"||col==="g"||col==="material")?"asc":"desc";}
+  renderManage();
+}
 document.addEventListener("click",e=>{
   const el=e.target.closest("[data-act]");if(!el)return;
   const act=el.dataset.act,id=el.dataset.id;

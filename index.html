@@ -1592,11 +1592,11 @@ function importXlsx(file){
       Object.keys(byDS).forEach(k=>{
         const parts=k.split("|");const date=parts[0],subject=parts[1];
         const g=ensureGoal(subject);
-        g.subgoals=g.subgoals.filter(s=>!(s.date===date&&s.subject===subject&&!s.manual));
+        // 增加模式：不清空已有任务，仅追加新任务（同名同日期同学科跳过，避免重复）
         byDS[k].forEach(p=>{if(g.subgoals.some(s=>s.date===date&&s.subject===subject&&s.sub===p.sub))return;g.subgoals.push(p);count++;});
       });
       save();closeModal();render();
-      let msg=`已导入/更新 ${count} 条子目标（共识别 ${parsed.length} 条）`;
+      let msg=`已新增 ${count} 条子目标（共识别 ${parsed.length} 条，已有同名任务会自动跳过）`;
       if(createdGoals.length)msg+="；已自动创建目标："+createdGoals.join("、");
       if(parsed.length===0 && rows.length>1)msg="未识别到有效数据，请检查表头是否含「日期/学科/学习任务内容安排」";
       toast(msg,1500);

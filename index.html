@@ -289,6 +289,10 @@ function dailyKey(){return curExec===0?"gaokao_daily_target":"gaokao_daily_targe
 function defaultDaily(){return curExec===0?600:300;}
 let dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
 function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}
+function yuanKey(){return curExec===0?"gaokao_yuan_per_min":"gaokao_yuan_per_min_chenzihan";}
+function defaultYuan(){return 2;}
+let yuanPerMin=(()=>{const raw=localStorage.getItem(yuanKey());return raw===null?defaultYuan():Math.max(0,Number(raw)||0);})();
+function setYuanPerMin(v){yuanPerMin=Math.max(0,Number(v)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}
 const REMIND_KEY="gaokao_reminder";
 let reminderEnabled=(localStorage.getItem(REMIND_KEY)||"1")==="1";
 let reminderOverlayOpen=false,lastReminderTs=0,reminderTimer=null;
@@ -476,6 +480,7 @@ function switchExecutor(i){
   executorName=localStorage.getItem("gaokao_exec_name_"+curCfg().id)||curCfg().name;
   affirmation=localStorage.getItem(affirmKey())||"";
   dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
+  yuanPerMin=(()=>{const raw=localStorage.getItem(yuanKey());return raw===null?defaultYuan():Math.max(0,Number(raw)||0);})();
   load();
   document.title=executorName+"-高考学习目标管理台";
   updateExecNav();
@@ -797,6 +802,11 @@ function renderToday(){
         <span style="font-weight:700;padding-top:2px">天</span>
       </div>
       <div class="affirm-box" style="flex:0 1 380px;min-width:240px;padding:10px 14px;background:rgba(255,255,255,.55);border-radius:10px;font-size:13px;line-height:1.6;color:${affirmation?'var(--ink)':'var(--muted)'};border-left:3px solid var(--primary);white-space:pre-wrap">${affirmation?esc(affirmation):'<em>写下你的约定</em>'}</div>
+      <div class="earn-box" style="flex:0 0 auto;min-width:160px;padding:10px 14px;background:linear-gradient(135deg,#fef9c3,#fefce8);border-radius:10px;font-size:13px;line-height:1.4;border-left:3px solid #eab308">
+        <div style="font-weight:700;color:#854d0e;display:flex;align-items:center;gap:4px">💰 实时赚到</div>
+        <div style="font-size:22px;font-weight:900;color:#16a34a;margin:2px 0;letter-spacing:0.5px">¥(<span id="earn-val">${(todayMins*yuanPerMin).toFixed(0)}</span>)</div>
+        <div class="hint" style="font-size:11px;color:#92400e">${todayMins} 分 × ${yuanPerMin} 元/分</div>
+      </div>
     </div>
   </div>`;
   const remain=Math.max(0,dailyTargetMins-todayMins);
@@ -1111,6 +1121,14 @@ function renderMine(){
         <div class="row-inline">
           <input id="daily-target" type="number" min="0" step="10" value="${dailyTargetMins}" style="flex:1;font-size:14px">
           <button class="btn primary sm" data-act="save-daily">保存</button>
+        </div>
+        <div style="margin-top:10px">
+          <label style="font-size:13px;font-weight:700">每分钟奖励（元/分钟）</label>
+          <div class="hint" style="margin:4px 0 6px">今日页头部会显示「实时赚到 ¥(N)」= 今日已打卡分钟 × 此值。${executorName} 当前 ${yuanPerMin} 元/分钟（默认 2）。</div>
+          <div class="row-inline">
+            <input id="yuan-per-min" type="number" min="0" step="0.5" value="${yuanPerMin}" style="flex:1;font-size:14px">
+            <button class="btn primary sm" data-act="save-yuan">保存</button>
+          </div>
         </div>
       </div>
       <div style="margin-top:14px">
@@ -1797,6 +1815,10 @@ document.addEventListener("click",e=>{
   if(act==="save-daily"){
     const v=Math.max(0,Number(document.getElementById("daily-target").value)||0);
     setDailyTargetMins(v);render();toast("每天打卡时长目标已保存为 "+v+" 分钟");return;
+  }
+  if(act==="save-yuan"){
+    const v=Math.max(0,Number(document.getElementById("yuan-per-min").value)||0);
+    setYuanPerMin(v);render();toast("每分钟奖励已保存为 "+yuanPerMin+" 元（"+executorName+"）");return;
   }
   if(act==="toggle-reminder"){setReminderEnabled(!reminderEnabled);render();toast("学习提醒已"+(reminderEnabled?"开启":"关闭"));return;}
   if(act==="toggle-beat"){setBeatEnabled(!beatEnabled);render();toast("心跳缩放已"+(beatEnabled?"开启":"关闭"));return;}

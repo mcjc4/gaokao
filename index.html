@@ -322,7 +322,7 @@ function setAutoRefreshEnabled(v){autoRefreshEnabled=!!v;try{localStorage.setIte
 const AFFIRM_KEY="gaokao_affirmation";
 function affirmKey(){return curExec===0?"gaokao_affirmation":"gaokao_affirmation_chenzihan";}
 let affirmation=localStorage.getItem(affirmKey())||"";
-function setAffirmation(v){affirmation=(v||"").trim();try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}
+function setAffirmation(v){affirmation=(v||"").trim();try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}if(S&&typeof S==="object"){S.affirmation=affirmation;save();}}
 const PUSH_KEY="gaokao_push_on";
 const DEFAULT_PUSH_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=f18b56e9a884bdd2c9a933e1994ad7856ba0e1fce2404d366589a218c1683f1e";
 const DEFAULT_PUSH_PROXY="https://young-hat-353c.mcjc4.workers.dev/";
@@ -469,9 +469,10 @@ function migrate(s){
     return g;
   });
   s.weeklyNotes=s.weeklyNotes||{};
+  s.affirmation=s.affirmation||"";
   return s;
 }
-function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 function switchExecutor(i){
   if(i===curExec)return;
@@ -573,7 +574,8 @@ async function pullCloud(silent, force){
       const localUp=S.updatedAt||0;
       if(force||remoteUp>localUp){
         const payload=typeof row.data==='string'?JSON.parse(row.data):row.data;
-        S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){}
+        S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
+        affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";
         if(curTab)render();
         if(!silent&&curTab)toast("已同步云端最新数据");
       }

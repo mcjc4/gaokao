@@ -1632,15 +1632,19 @@ function openCheckin(id,dateStr){
   const bf=dateStr!==todayStr();
   const rem=remaining(g);
   let opts="";for(let i=0;i<=6;i++){const d=addDays(todayStr(),-i);opts+=`<option value="${d}" ${d===dateStr?'selected':''}>${d}${i===0?'（今天）':'（补）'}</option>`;}
-  const subOpts=g.subgoals.map(s=>`<option value="${esc(s.sub)}">${esc(s.sub)}（${esc(s.material)} ${s.mins}分）</option>`).join("");
+  const dataList=`<datalist id="ci-sub-list">${g.subgoals.map(s=>`<option value="${esc(s.sub)}">`).join("")}</datalist>`;
+  const defSub=g.subgoals.length?g.subgoals[g.subgoals.length-1].sub:"";
   const html=`<h3><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>打卡 · ${esc(g.name)}</h3>
     <label>日期</label><select id="ci-date">${opts}</select>
     <div class="field-row"><div style="flex:1"><label>分钟数（选填）</label><input id="ci-minutes" type="number" min="0" value="" placeholder="分钟"></div></div>
-    <label>子目标（选填）<span class="hint">还剩 ${rem} 个未打卡</span></label><select id="ci-sub"><option value="">—</option>${subOpts}</select>
+    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="ci-done" checked style="width:18px;height:18px"> <span style="font-weight:600">✓ ${esc(defSub||"今日任务")}</span></label>
+    <label>任务名称（打卡标题）</label><input id="ci-sub" list="ci-sub-list" value="${esc(defSub)}" maxlength="60" placeholder="直接输入或从下拉选择，可修改" style="width:100%;padding:10px 12px;border:1.5px solid var(--primary);border-radius:10px;background:#fff;color:var(--text);font-size:15px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)">${dataList}
+    <div class="hint" style="margin:2px 0 6px">输入或选一个；不选视为"自由打卡"，下方按钮发钉钉/微信</div>
     <div class="field-row"><div><label>错题类型（选填）</label><input id="ci-wrongtype" placeholder="如：短思维链错题"></div><div><label>错题题数（选填）</label><input id="ci-wrongcount" type="number" min="0" value=""></div></div>
     <label>备注（选填）</label><input id="ci-note" placeholder="今天状态…">
-    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="ci-save" data-id="${id}">保存打卡</button></div>`;
+    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="ci-save" data-id="${id}">保存打卡并发送通知</button></div>`;
   openModal(html);
+  setTimeout(()=>{const inp=document.getElementById("ci-sub");if(inp){inp.focus();inp.select();}},50);
 }
 function openQuickCheckin(id,subHint){
   const g=S.goals.find(x=>x.id===id);if(!g)return;

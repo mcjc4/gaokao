@@ -417,7 +417,7 @@ function pushCheckinNotify(cur){
   }
 }
 const REMIND_PHRASES=["现在开始，就不晚。","你比昨天的自己更接近梦想。","刷一题是一题，积少成多。","先专注 25 分钟，动起来。","离高考又近了一天，加油。","别让今天的犹豫，变成明天的遗憾。","把手机放下，翻开书。","每一分钟，都在为未来加权。"];
-function onGoalDone(){if(celebrateLevel==="off")return;celebrate();if(celebrateLevel==="fancy"){fireworks();badgePop();}}
+function onGoalDone(){if(celebrateLevel==="off")return;const fns=[celebrate,fireworks,badgePop];fns[Math.floor(Math.random()*fns.length)]();}
 const PALETTE=["#7c5cff","#16a34a","#e08a00","#e23b3b","#0ea5e9","#db2777","#65a30d","#9333ea"];
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -1634,7 +1634,8 @@ function openCheckin(id,dateStr){
   let opts="";for(let i=0;i<=6;i++){const d=addDays(todayStr(),-i);opts+=`<option value="${d}" ${d===dateStr?'selected':''}>${d}${i===0?'（今天）':'（补）'}</option>`;}
   const dataList=`<datalist id="ci-sub-list">${g.subgoals.map(s=>`<option value="${esc(s.sub)}">`).join("")}</datalist>`;
   const defSub=g.subgoals.length?g.subgoals[g.subgoals.length-1].sub:"";
-  const html=`<h3><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>打卡 · ${esc(g.name)}</h3>
+  const weekdayName="日一二三四五六"[new Date(dateStr).getDay()];
+  const html=`<h3 style="display:flex;align-items:center;gap:8px;margin:0 0 4px"><svg class="ico" viewBox="0 0 24 24" style="flex:0 0 22px"><path d="M5 13l4 4L19 7"/></svg><input id="ci-title" value="打卡 · ${dateStr} 星期${weekdayName} · ${esc(g.name)}" style="flex:1;border:1.5px solid var(--primary);border-radius:10px;background:#fff;padding:8px 10px;font-size:16px;font-weight:700;color:var(--text);box-shadow:inset 0 1px 3px rgba(0,0,0,.08);font-family:inherit"></h3>
     <label>日期</label><select id="ci-date">${opts}</select>
     <div class="field-row"><div style="flex:1"><label>分钟数（选填）</label><input id="ci-minutes" type="number" min="0" value="" placeholder="分钟"></div></div>
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="ci-done" checked style="width:18px;height:18px"> <span style="font-weight:600">✓ ${esc(defSub||"今日任务")}</span></label>
@@ -1877,7 +1878,7 @@ document.addEventListener("click",e=>{
     save();
     if(viewDate===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
     closeModal();render();
-    if(!wasDone&&completion(g)>=100){onGoalDone();toast("目标达成！");}
+    onGoalDone();if(!wasDone&&completion(g)>=100)toast("目标达成！");
     else celebrate();
     toast("已添加并打卡");
     return;
@@ -2057,7 +2058,7 @@ document.addEventListener("click",e=>{
     g.records.push({id:uid(),date,amount,minutes,sub,wrongType,wrongCount,note,isBackfill:date!==todayStr(),createdAt:Date.now()});
     save();
     if(date===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
-    if(!wasDone&&completion(g)>=100){onGoalDone();toast("目标达成！");}
+    onGoalDone();if(!wasDone&&completion(g)>=100)toast("目标达成！");
     closeModal();render();toast("已打卡"+(date!==todayStr()?"（补记）":""));
     return;
   }
@@ -2073,7 +2074,7 @@ document.addEventListener("click",e=>{
     save();
     if(viewDate===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
     closeModal();render();
-    if(!wasDone&&completion(g)>=100){onGoalDone();toast("目标达成！");}
+    onGoalDone();if(!wasDone&&completion(g)>=100)toast("目标达成！");
     else celebrate();
     toast("已打卡");
     return;

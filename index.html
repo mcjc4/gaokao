@@ -1647,7 +1647,7 @@ function openQuickCheckin(id,subHint){
   const matched=tods.find(s=>s.sub===(subHint||""));
   const todaySub=matched||(tods[0]||{sub:""});
   const title=todaySub.sub||'自主安排';
-  const html=`<h3><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>${esc(title)}</h3>
+  const html=`<h3 style="display:flex;align-items:center;gap:8px"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><input id="qc-title" value="${esc(title)}" style="border:none;background:transparent;font-size:18px;font-weight:700;width:100%;font-family:inherit;outline:none;color:var(--text);padding:0" placeholder="任务标题（可直接修改）"></h3>
     <input type="hidden" id="qc-sub" value="${esc(todaySub.sub)}">
     <div class="field-row"><div style="flex:1"><label>耗时分钟数</label><input id="qc-minutes" type="number" min="0" value="" placeholder="分钟"></div></div>
     <div class="field-row"><div style="flex:1"><label>错题类型</label><input id="qc-wrongtype" value="短思维链错题" placeholder="如：短思维链错题"></div><div style="flex:1"><label>错题数量</label><input id="qc-wrongcount" type="number" min="0" value="" placeholder="题"></div></div>
@@ -2056,7 +2056,7 @@ document.addEventListener("click",e=>{
     const minutes=Math.max(0,Number(document.getElementById("qc-minutes").value)||0);
     const wrongType=document.getElementById("qc-wrongtype").value.trim();
     const wrongCount=Math.max(0,Number(document.getElementById("qc-wrongcount").value)||0);
-    const sub=document.getElementById("qc-sub").value;
+    const sub=(document.getElementById("qc-title")?.value||"").trim() || document.getElementById("qc-sub").value;
     const wasDone=completion(g)>=100;
     g.records.push({id:uid(),date:viewDate,amount,minutes,sub,wrongType,wrongCount,note:"",isBackfill:viewDate!==todayStr(),createdAt:Date.now()});
     save();

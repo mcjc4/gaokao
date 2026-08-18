@@ -1672,10 +1672,15 @@ function openEditManual(gid,sub,date){
   const rec=g.records.find(r=>r.date===dt&&r.sub===sub);
   const mins=sg?sg.mins:(rec?rec.minutes:0);
   const material=sg?(sg.material||""):"";
+  const reviewed=sg?(sg.reviewed!==false):true;
   const wt=rec?rec.wrongType||"短思维链错题":"短思维链错题";
   const wc=rec?rec.wrongCount||0:0;
   const html=`<h3><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg>编辑任务 · ${esc(g.name)}</h3>
-    <label>任务名称</label><input id="em-sub" value="${esc(sub)}" maxlength="60">
+    <label>任务名称（打卡标题）</label><input id="em-sub" value="${esc(sub)}" maxlength="60">
+    <div style="margin-top:8px;margin-bottom:10px;padding:8px 10px;background:rgba(124,92,255,.06);border:1px solid rgba(124,92,255,.2);border-radius:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;font-weight:600"><input type="checkbox" id="em-reviewed" ${reviewed?'checked':''}> ✓ 审核记忆卡去留或修改</label>
+      <div class="hint" style="margin:4px 0 0 22px">勾选 = 此任务已审核（作为正式记忆卡保留）；取消勾选 = 暂时下架/待修改</div>
+    </div>
     <div class="field-row"><div style="flex:1"><label>学习时长（分钟）</label><input id="em-minutes" type="number" min="0" value="${mins}"></div><div style="flex:1"><label>材料/出处</label><input id="em-material" value="${esc(material)}" maxlength="80" placeholder="可选，如：洋葱数学P47"></div></div>
     <div class="field-row"><div style="flex:1"><label>错题类型</label><input id="em-wrongtype" value="${esc(wt)}" placeholder="如：短思维链错题"></div><div style="flex:1"><label>错题数量</label><input id="em-wrongcount" type="number" min="0" value="${wc}"></div></div>
     <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="edit-manual-save" data-gid="${gid}" data-sub="${esc(sub)}" data-date="${dt}">保存</button></div>`;
@@ -1886,8 +1891,9 @@ document.addEventListener("click",e=>{
     const material=document.getElementById("em-material").value.trim();
     const wt=document.getElementById("em-wrongtype").value.trim();
     const wc=Math.max(0,Number(document.getElementById("em-wrongcount").value)||0);
+    const reviewed=document.getElementById("em-reviewed").checked;
     const sg=g.subgoals.find(s=>s.date===dt&&s.subject===g.name&&s.sub===oldSub);
-    if(sg){sg.sub=newSub;sg.mins=mins;sg.material=material;}
+    if(sg){sg.sub=newSub;sg.mins=mins;sg.material=material;sg.reviewed=reviewed;}
     g.records.forEach(r=>{if(r.date===dt&&r.sub===oldSub){r.sub=newSub;r.minutes=mins;r.wrongType=wt;r.wrongCount=wc;}});
     save();closeModal();render();toast("已更新任务");return;
   }

@@ -906,10 +906,11 @@ function subjectDistCard(){
 }
 function renderBoard(){
   const main=document.getElementById("main");
-  let html=`<h3 style="margin:0 0 4px;display:flex;align-items:center;gap:10px">看板<button class="btn primary sm" data-act="export-xlsx" title="导出当前执行人全部打卡记录为 Excel"><svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>导出 XLSX</button></h3><div class="hint" style="margin-bottom:14px">进度环、核心数字、预案与最近记录，下方为全部目标近 14 天投入分钟堆叠图。</div>`;
+  let html=`<h3 style="margin:0 0 4px;display:flex;align-items:center;gap:10px">看板<button class="btn primary sm" data-act="export-xlsx" title="导出当前执行人全部打卡记录为 Excel"><svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>导出 XLSX</button></h3><div class="hint" style="margin-bottom:14px">各科投入时间分布与进度环，下方为全部目标近 14 天投入分钟堆叠图。</div>`;
+  html+=subjectDistCard();
   if(S.goals.length===0)html+=`<div class="empty"><div class="big">还没有目标</div></div>`;
   else html+=`<div class="grid-2">`+S.goals.map(boardCard).join("")+`</div>`;
-  html+=stackedChart();html+=subjectDistCard();
+  html+=stackedChart();
   main.innerHTML=html;
 }
 

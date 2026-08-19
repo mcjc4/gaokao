@@ -906,7 +906,7 @@ function subjectDistCard(){
 }
 function renderBoard(){
   const main=document.getElementById("main");
-  let html=`<h3 style="margin:0 0 4px">看板</h3><div class="hint" style="margin-bottom:14px">进度环、核心数字、预案与最近记录，下方为全部目标近 14 天投入分钟堆叠图。</div>`;
+  let html=`<h3 style="margin:0 0 4px;display:flex;align-items:center;gap:10px">看板<button class="btn primary sm" data-act="export-xlsx" title="导出当前执行人全部打卡记录为 Excel"><svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>导出 XLSX</button></h3><div class="hint" style="margin-bottom:14px">进度环、核心数字、预案与最近记录，下方为全部目标近 14 天投入分钟堆叠图。</div>`;
   if(S.goals.length===0)html+=`<div class="empty"><div class="big">还没有目标</div></div>`;
   else html+=`<div class="grid-2">`+S.goals.map(boardCard).join("")+`</div>`;
   html+=stackedChart();html+=subjectDistCard();
@@ -1982,6 +1982,7 @@ document.addEventListener("click",e=>{
   if(act==="modal-back"){if(e.target===el)closeModal();return;}
   if(act==="banner-x"){document.getElementById("banner-root").innerHTML="";return;}
   if(act==="export"){exportJSON();return;}
+  if(act==="export-xlsx"){exportRecordsXlsx();return;}
   if(act==="import"){document.getElementById("import-file").click();return;}
   if(act==="migrate-check"){const v=migrate(S).version;toast("当前结构版本 v"+v+"，导入旧备份会自动兼容");return;}
   if(act==="clear-demo"){S.goals=S.goals.filter(g=>!g.demo);save();render();toast("已清空示例目标");return;}
@@ -2135,6 +2136,82 @@ function exportJSON(){
   const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);const a=document.createElement("a");
   a.href=url;a.download="学习目标备份-"+todayStr()+".json";a.click();URL.revokeObjectURL(url);
+}
+/* ---- 打卡记录导出 XLSX（零依赖：手写 zip store + sheet XML） ---- */
+function crc32(buf){
+  let c;const t=[];
+  for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++)crc=t[(crc^buf[i])&0xFF]^(crc>>>8);
+  return (crc^0xFFFFFFFF)>>>0;
+}
+function escXml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function colName(i){let s="";i+=1;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+function xlsxSheetXml(rows){
+  let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  rows.forEach((row,ri)=>{
+    xml+='<row r="'+(ri+1)+'">';
+    row.forEach((cell,ci)=>{
+      xml+='<c r="'+colName(ci)+(ri+1)+'" t="inlineStr"><is><t xml:space="preserve">'+escXml(cell==null?"":cell)+'</t></is></c>';
+    });
+    xml+='</row>';
+  });
+  return xml+'</sheetData></worksheet>';
+}
+function buildZipStore(files){
+  const enc=new TextEncoder();const chunks=[];const central=[];let offset=0;
+  Object.keys(files).forEach(name=>{
+    const data=typeof files[name]==="string"?enc.encode(files[name]):files[name];
+    const crc=crc32(data);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0,true);lh.setUint16(8,0,true);
+    lh.setUint16(10,0,true);lh.setUint16(12,0,true);lh.setUint32(14,crc,true);
+    lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    const nb=enc.encode(name);
+    chunks.push(new Uint8Array(lh.buffer),nb,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0,true);
+    ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0,true);ch.setUint32(16,crc,true);
+    ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,name.length,true);
+    ch.setUint32(42,offset,true);
+    central.push([ch,nb]);
+    offset+=30+name.length+data.length;
+  });
+  const cdSize=central.reduce((a,c)=>a+(c[0].byteLength+c[1].length),0);
+  const eocd=new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true);eocd.setUint16(8,Object.keys(files).length,true);eocd.setUint16(10,Object.keys(files).length,true);
+  eocd.setUint32(12,cdSize,true);eocd.setUint32(16,offset,true);eocd.setUint16(20,0,true);
+  const parts=[];chunks.forEach(c=>parts.push(c));central.forEach(([dv,nb])=>{parts.push(new Uint8Array(dv.buffer),nb);});parts.push(new Uint8Array(eocd.buffer));
+  const total=parts.reduce((a,b)=>a+b.length,0);const final=new Uint8Array(total);let p=0;
+  parts.forEach(b=>{final.set(b,p);p+=b.length;});
+  return final;
+}
+function exportRecordsXlsx(){
+  const rows=[[ "执行人","日期","星期","学科","任务名称","时长(分钟)","错题类型","错题数量","备注","是否补卡","打卡时间" ]];
+  S.goals.forEach(g=>{
+    (g.records||[]).forEach(r=>{
+      rows.push([executorName,r.date,"星期"+"日一二三四五六"[new Date(r.date).getDay()],g.name,r.sub||"",r.minutes||0,r.wrongType||"",r.wrongCount||0,r.note||"",r.isBackfill?"补卡":"正常",r.createdAt?new Date(r.createdAt).toLocaleString("zh-CN"):""]);
+    });
+  });
+  rows.slice(1).sort((a,b)=>(a[1]||"").localeCompare(b[1]||""));
+  if(rows.length===1){toast("还没有打卡记录");return;}
+  const CT='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const RELS='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const WB='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="打卡记录" sheetId="1" r:id="rId1"/></sheets></workbook>';
+  const WB_RELS='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>';
+  const STYLES='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="1"><xf/></cellXfs></styleSheet>';
+  const zip=buildZipStore({
+    "[Content_Types].xml":CT,
+    "_rels/.rels":RELS,
+    "xl/workbook.xml":WB,
+    "xl/_rels/workbook.xml.rels":WB_RELS,
+    "xl/styles.xml":STYLES,
+    "xl/worksheets/sheet1.xml":xlsxSheetXml(rows)
+  });
+  const blob=new Blob([zip],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  a.href=url;a.download=(executorName||"学习台")+"-打卡记录-"+todayStr()+".xlsx";a.click();URL.revokeObjectURL(url);
+  toast("已导出 xlsx（"+executorName+"，"+(rows.length-1)+" 条记录）");
 }
 function celebrate(){
   if(celebrateLevel==="off")return;

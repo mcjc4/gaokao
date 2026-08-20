@@ -1655,11 +1655,11 @@ function openQuickCheckin(id,subHint){
   const matched=tods.find(s=>s.sub===(subHint||""));
   const todaySub=matched||(tods[0]||{sub:""});
   const title=todaySub.sub||'自主安排';
-  const html=`<h3 style="display:flex;align-items:center;gap:8px"><svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><input id="qc-title" value="${esc(title)}" style="border:none;background:transparent;font-size:18px;font-weight:700;width:100%;font-family:inherit;outline:none;color:var(--text);padding:0" placeholder="任务标题（可直接修改）"></h3>
+  const html=`<h3 style="display:flex;align-items:center;gap:8px;margin:0 0 4px"><svg class="ico" viewBox="0 0 24 24" style="flex:0 0 22px"><path d="M5 13l4 4L19 7"/></svg><input id="qc-title" value="${esc(title)}" style="flex:1;border:1.5px solid var(--primary);border-radius:10px;background:#fff;padding:8px 10px;font-size:18px;font-weight:700;color:var(--text);box-shadow:inset 0 1px 3px rgba(0,0,0,.08);font-family:inherit" placeholder="任务标题（可直接修改）"></h3>
     <input type="hidden" id="qc-sub" value="${esc(todaySub.sub)}">
     <div class="field-row"><div style="flex:1"><label>耗时分钟数</label><input id="qc-minutes" type="number" min="0" value="" placeholder="分钟"></div></div>
     <div class="field-row"><div style="flex:1"><label>错题类型</label><input id="qc-wrongtype" value="短思维链错题" placeholder="如：短思维链错题"></div><div style="flex:1"><label>错题数量</label><input id="qc-wrongcount" type="number" min="0" value="" placeholder="题"></div></div>
-    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="qc-save" data-id="${id}">确定</button></div>`;
+    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn ghost" data-act="qc-save-only" data-id="${id}">仅保存（不打卡）</button><button class="btn primary" data-act="qc-save" data-id="${id}">打卡并推送</button></div>`;
   openModal(html);
 }
 function openAddTask(id){
@@ -2074,6 +2074,20 @@ document.addEventListener("click",e=>{
     if(date===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
     onGoalDone();if(!wasDone&&completion(g)>=100)toast("目标达成！");
     closeModal();render();toast("已打卡"+(date!==todayStr()?"（补记）":""));
+    return;
+  }
+  if(act==="qc-save-only"){
+    const g=S.goals.find(x=>x.id===id);if(!g)return;
+    const orig=document.getElementById("qc-sub").value||"";
+    const newSub=(document.getElementById("qc-title")?.value||"").trim();
+    const minutes=Math.max(0,Number(document.getElementById("qc-minutes").value)||0);
+    if(!newSub){toast("请填写任务标题");return;}
+    const sg=g.subgoals.find(s=>s.date===viewDate&&s.subject===g.name&&s.sub===orig);
+    if(sg){sg.sub=newSub;sg.mins=minutes;}
+    else if(!g.subgoals.some(s=>s.date===viewDate&&s.subject===g.name&&s.sub===newSub)){
+      g.subgoals.push({date:viewDate,subject:g.name,material:"",mins:minutes,sub:newSub,manual:true});
+    }
+    save();closeModal();render();toast("已仅保存（未打卡、未发送通知）");
     return;
   }
   if(act==="qc-save"){

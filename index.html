@@ -735,7 +735,7 @@ function goalCard(g,pin){
   }else{
     targetRows=tods.map(s=>{
       const r=recForSub(s.sub);
-      const actions=`<span class="row-actions"><button class="icon-btn" data-act="edit-manual" data-gid="${g.id}" data-sub="${esc(s.sub)}" title="编辑任务"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button><button class="icon-btn del" data-act="del-manual" data-gid="${g.id}" data-sub="${esc(s.sub)}" title="删除任务"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`;
+      const actions=`<span class="row-actions"><button class="icon-btn del" data-act="del-manual" data-gid="${g.id}" data-sub="${esc(s.sub)}" title="删除任务"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`;
       return `<div class="target-row ${r?'done':''}" style="--sc:${g.color}"><label class="tr-inner"><input type="checkbox" class="circle-check" data-act="check-sub" data-gid="${g.id}" data-sub="${esc(s.sub)}" ${r?'checked':''}><div class="today-target"><div class="target-name">${esc(s.sub)}</div>${metaHtml(s,r)}</div></label>${actions}</div>`;
     }).join("");
   }
@@ -1637,14 +1637,15 @@ function openCheckin(id,dateStr){
   const defSub=g.subgoals.length?g.subgoals[g.subgoals.length-1].sub:"";
   const weekdayName="日一二三四五六"[new Date(dateStr).getDay()];
   const html=`<h3 style="display:flex;align-items:center;gap:8px;margin:0 0 4px"><svg class="ico" viewBox="0 0 24 24" style="flex:0 0 22px"><path d="M5 13l4 4L19 7"/></svg><input id="ci-title" value="打卡 · ${dateStr} 星期${weekdayName} · ${esc(g.name)}" style="flex:1;border:1.5px solid var(--primary);border-radius:10px;background:#fff;padding:8px 10px;font-size:16px;font-weight:700;color:var(--text);box-shadow:inset 0 1px 3px rgba(0,0,0,.08);font-family:inherit"></h3>
+    <input type="hidden" id="ci-orig-sub" value="${esc(defSub)}">
     <label>日期</label><select id="ci-date">${opts}</select>
     <div class="field-row"><div style="flex:1"><label>分钟数（选填）</label><input id="ci-minutes" type="number" min="0" value="" placeholder="分钟"></div></div>
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="ci-done" checked style="width:18px;height:18px"> <span style="font-weight:600">✓ ${esc(defSub||"今日任务")}</span></label>
     <label>任务名称（打卡标题）</label><input id="ci-sub" list="ci-sub-list" value="${esc(defSub)}" maxlength="60" placeholder="直接输入或从下拉选择，可修改" style="width:100%;padding:10px 12px;border:1.5px solid var(--primary);border-radius:10px;background:#fff;color:var(--text);font-size:15px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)">${dataList}
-    <div class="hint" style="margin:2px 0 6px">输入或选一个；不选视为"自由打卡"，下方按钮发钉钉/微信</div>
+    <div class="hint" style="margin:2px 0 6px">输入或选一个；不选视为"自由打卡"，"保存打卡并发送通知"会发钉钉/微信</div>
     <div class="field-row"><div><label>错题类型（选填）</label><input id="ci-wrongtype" placeholder="如：短思维链错题"></div><div><label>错题题数（选填）</label><input id="ci-wrongcount" type="number" min="0" value=""></div></div>
     <label>备注（选填）</label><input id="ci-note" placeholder="今天状态…">
-    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="ci-save" data-id="${id}">保存打卡并发送通知</button></div>`;
+    <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn ghost" data-act="ci-save-only" data-id="${id}">仅保存（不打卡）</button><button class="btn primary" data-act="ci-save" data-id="${id}">保存打卡并发送通知</button></div>`;
   openModal(html);
   setTimeout(()=>{const inp=document.getElementById("ci-sub");if(inp){inp.focus();inp.select();}},50);
 }
@@ -1679,15 +1680,10 @@ function openEditManual(gid,sub,date){
   const rec=g.records.find(r=>r.date===dt&&r.sub===sub);
   const mins=sg?sg.mins:(rec?rec.minutes:0);
   const material=sg?(sg.material||""):"";
-  const reviewed=sg?(sg.reviewed!==false):true;
   const wt=rec?rec.wrongType||"短思维链错题":"短思维链错题";
   const wc=rec?rec.wrongCount||0:0;
   const html=`<h3><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg>编辑任务 · ${esc(g.name)}</h3>
     <label>任务名称（打卡标题）</label><input id="em-sub" value="${esc(sub)}" maxlength="60" style="width:100%;padding:10px 12px;border:1.5px solid var(--primary);border-radius:10px;background:#fff;color:var(--text);font-size:15px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)">
-    <div style="margin-top:8px;margin-bottom:10px;padding:8px 10px;background:rgba(124,92,255,.06);border:1px solid rgba(124,92,255,.2);border-radius:8px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;font-weight:600"><input type="checkbox" id="em-reviewed" ${reviewed?'checked':''}> ✓ 审核记忆卡去留或修改</label>
-      <div class="hint" style="margin:4px 0 0 22px">勾选 = 此任务已审核（作为正式记忆卡保留）；取消勾选 = 暂时下架/待修改</div>
-    </div>
     <div class="field-row"><div style="flex:1"><label>学习时长（分钟）</label><input id="em-minutes" type="number" min="0" value="${mins}"></div><div style="flex:1"><label>材料/出处</label><input id="em-material" value="${esc(material)}" maxlength="80" placeholder="可选，如：洋葱数学P47"></div></div>
     <div class="field-row"><div style="flex:1"><label>错题类型</label><input id="em-wrongtype" value="${esc(wt)}" placeholder="如：短思维链错题"></div><div style="flex:1"><label>错题数量</label><input id="em-wrongcount" type="number" min="0" value="${wc}"></div></div>
     <div class="modal-actions"><button class="btn ghost" data-act="close">取消</button><button class="btn primary" data-act="edit-manual-save" data-gid="${gid}" data-sub="${esc(sub)}" data-date="${dt}">保存</button></div>`;
@@ -1898,9 +1894,8 @@ document.addEventListener("click",e=>{
     const material=document.getElementById("em-material").value.trim();
     const wt=document.getElementById("em-wrongtype").value.trim();
     const wc=Math.max(0,Number(document.getElementById("em-wrongcount").value)||0);
-    const reviewed=document.getElementById("em-reviewed").checked;
     const sg=g.subgoals.find(s=>s.date===dt&&s.subject===g.name&&s.sub===oldSub);
-    if(sg){sg.sub=newSub;sg.mins=mins;sg.material=material;sg.reviewed=reviewed;}
+    if(sg){sg.sub=newSub;sg.mins=mins;sg.material=material;}
     g.records.forEach(r=>{if(r.date===dt&&r.sub===oldSub){r.sub=newSub;r.minutes=mins;r.wrongType=wt;r.wrongCount=wc;}});
     save();closeModal();render();toast("已更新任务");return;
   }
@@ -2045,6 +2040,23 @@ document.addEventListener("click",e=>{
   if(act==="delsub"){
     const key=el.dataset.sid;const gid=id;const g=S.goals.find(x=>x.id===gid);
     if(g){const [d,s]=key.split("|");g.subgoals=g.subgoals.filter(x=>!(x.date===d&&x.sub===s));save();openGoalModal(gid);}
+    return;
+  }
+  if(act==="ci-save-only"){
+    const g=S.goals.find(x=>x.id===id);if(!g)return;
+    const date=document.getElementById("ci-date").value;
+    const orig=document.getElementById("ci-orig-sub").value||"";
+    const newSub=document.getElementById("ci-sub").value.trim();
+    const minutes=Math.max(0,Number(document.getElementById("ci-minutes").value)||0);
+    if(!newSub){toast("请填写任务名称");return;}
+    const sg=g.subgoals.find(s=>s.date===date&&s.subject===g.name&&s.sub===orig);
+    if(sg){sg.sub=newSub;sg.mins=minutes;}
+    else{
+      if(!g.subgoals.some(s=>s.date===date&&s.subject===g.name&&s.sub===newSub)){
+        g.subgoals.push({date,subject:g.name,material:"",mins:minutes,sub:newSub,manual:true});
+      }
+    }
+    save();closeModal();render();toast("已仅保存（未打卡、未发送通知）");
     return;
   }
   if(act==="ci-save"){

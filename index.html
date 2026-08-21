@@ -2072,6 +2072,15 @@ document.addEventListener("click",e=>{
     const note=document.getElementById("ci-note").value.trim();
     const wasDone=completion(g)>=100;
     g.records.push({id:uid(),date,amount,minutes,sub,wrongType,wrongCount,note,isBackfill:date!==todayStr(),createdAt:Date.now()});
+    // 若修改了标题，同步更新子目标，避免旧标题仍停留在未打卡列表
+    const orig=document.getElementById("ci-orig-sub").value||"";
+    if(orig&&orig!==sub){
+      const osg=g.subgoals.find(s=>s.date===date&&s.subject===g.name&&s.sub===orig);
+      if(osg){osg.sub=sub;osg.mins=minutes;}
+      else if(!g.subgoals.some(s=>s.date===date&&s.subject===g.name&&s.sub===sub)){
+        g.subgoals.push({date,subject:g.name,material:"",mins:minutes,sub,manual:true});
+      }
+    }
     save();
     if(date===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
     onGoalDone();if(!wasDone&&completion(g)>=100)toast("目标达成！");
@@ -2101,6 +2110,15 @@ document.addEventListener("click",e=>{
     const sub=(document.getElementById("qc-title")?.value||"").trim() || document.getElementById("qc-sub").value;
     const wasDone=completion(g)>=100;
     g.records.push({id:uid(),date:viewDate,amount,minutes,sub,wrongType,wrongCount,note:"",isBackfill:viewDate!==todayStr(),createdAt:Date.now()});
+    // 若修改了标题，同步更新子目标，避免旧标题仍停留在未打卡列表
+    const orig=document.getElementById("qc-sub").value||"";
+    if(orig&&orig!==sub){
+      const osg=g.subgoals.find(s=>s.date===viewDate&&s.subject===g.name&&s.sub===orig);
+      if(osg){osg.sub=sub;osg.mins=minutes;}
+      else if(!g.subgoals.some(s=>s.date===viewDate&&s.subject===g.name&&s.sub===sub)){
+        g.subgoals.push({date:viewDate,subject:g.name,material:"",mins:minutes,sub,manual:true});
+      }
+    }
     save();
     if(viewDate===todayStr())pushCheckinNotify({sub,minutes,wrongType,wrongCount,subject:g.name});
     closeModal();render();

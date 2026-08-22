@@ -2401,8 +2401,8 @@ function badgePop(txt){
   if(celebrateLevel==="off")return;
   const root=document.getElementById("confetti-root");
   const b=document.createElement("div");
-  b.style.cssText="position:absolute;left:50%;top:46%;min-width:192px;min-height:192px;max-width:600px;padding:0 48px;border-radius:999px;transform:translate(-50%,70px) scale(.7);opacity:0;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;text-align:center;white-space:nowrap;box-shadow:0 8px 30px rgba(245,158,11,.55);box-sizing:border-box";
-  b.innerHTML=`<span class="badge-money" style="font-size:52px">💰</span><span class="badge-amt" style="font-size:44px;font-weight:800">${esc(txt||"+0 元")}</span>`;
+  b.style.cssText="position:absolute;left:50%;top:46%;transform:translate(-50%,70px) scale(.7);opacity:0;display:flex;align-items:center;justify-content:center;gap:8px;color:#f59e0b;text-align:center;white-space:nowrap;text-shadow:0 2px 16px rgba(245,158,11,.55),0 0 44px rgba(251,191,36,.5);box-sizing:border-box";
+  b.innerHTML=`<span class="badge-money" style="font-size:60px">💰</span><span class="badge-amt" style="font-size:56px;font-weight:900">${esc(txt||"+0 元")}</span>`;
   root.appendChild(b);
   requestAnimationFrame(()=>{b.style.transition="transform 330ms cubic-bezier(.2,1.4,.4,1),opacity 220ms ease-out";b.style.transform="translate(-50%,-50%) scale(1.06)";b.style.opacity="1";});
   setTimeout(()=>{b.style.transition="transform 150ms ease-out";b.style.transform="translate(-50%,-50%) scale(1)";},350);

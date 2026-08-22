@@ -420,6 +420,8 @@ function pushCheckinNotify(cur){
   lines.push("已打卡 "+mins+" 分钟"+(dailyTargetMins>0?("（目标 "+dailyTargetMins+"，还差 "+remain+" 分钟达标）"):""));
   lines.push("今日错题 "+wrong+" 道");
   if(affirmation)lines.push("📌 今日约定："+affirmation);
+  const linkLine="📎 详情点击链接：https://mcjc4.github.io/gaokao/";
+  lines.push(linkLine);
   lines.push("保持节奏，继续加油 💪");
   const text=lines.join("\n");
   const viaProxy=(finalTarget,finalPayload)=>{
@@ -448,7 +450,8 @@ function pushCheckinNotify(cur){
   }
   // 微信 PushPlus
   if(hasPP){
-    const pp={token:pushToken,title:pushTitle,content:text,template:"txt"};
+    const ppContent=text.replace(linkLine,"📎 [详情点击链接](https://mcjc4.github.io/gaokao/)");
+    const pp={token:pushToken,title:pushTitle,content:ppContent,template:"markdown"};
     if(pushTopic)pp.topic=pushTopic;
     fetch("https://www.pushplus.plus/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(pp)}).catch(()=>{});
   }

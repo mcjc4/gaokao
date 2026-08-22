@@ -439,14 +439,10 @@ function pushCheckinNotify(cur){
       dingSign(pushSecret).then(({timestamp,sign})=>{payload.timestamp=timestamp;payload.sign=sign;doSend();}).catch(()=>{doSend();});
     }else{doSend();}
   }
-  // 飞书
+  // 飞书（浏览器直连：飞书支持 CORS 无需代理，国内稳定）
   if(hasFeishu){
     const payload={msg_type:"text",content:{text}};
-    if(pushProxy){
-      fetch(pushProxy,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:pushFeishuWebhook,payload})}).catch(()=>{});
-    }else{
-      fetch(pushFeishuWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
-    }
+    fetch(pushFeishuWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
   }
   // 微信 PushPlus
   if(hasPP){

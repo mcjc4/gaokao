@@ -300,6 +300,16 @@ function yuanKey(){return curExec===0?"gaokao_yuan_per_min":"gaokao_yuan_per_min
 function defaultYuan(){return 0.5;}
 let yuanPerMin=(()=>{const raw=localStorage.getItem(yuanKey());return raw===null?defaultYuan():Math.max(0,Number(raw)||0);})();
 function setYuanPerMin(v){yuanPerMin=Math.max(0,Number(v)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}if(S&&typeof S==="object"){S.yuanPerMin=yuanPerMin;save();}}
+function setWallet(w){if(!S||typeof S!=="object")return;S.wallet=Object.assign(S.wallet||{},{startDate:w.startDate||todayStr(),startAmount:Number(w.startAmount)||0,penalty:Number(w.penalty)||0});save();}
+function walletTotal(){
+  const w=S.wallet||{};
+  const startDate=w.startDate||"";
+  const startAmount=Number(w.startAmount)||0;
+  const penalty=Number(w.penalty)||0;
+  let mins=0;
+  S.goals.forEach(g=>g.records.forEach(r=>{if(r.date>=startDate)mins+=(r.minutes||0);}));
+  return Math.max(0,mins*yuanPerMin+startAmount-penalty);
+}
 const DASH_KEY="gaokao_dashboard_mode";
 let dashMode=(localStorage.getItem(DASH_KEY)||"1")==="1";
 function setDashMode(v){dashMode=!!v;try{localStorage.setItem(DASH_KEY,dashMode?"1":"0");}catch(e){}}
@@ -508,7 +518,7 @@ function migrate(s){
   if(s.dailyTargetMins!=null)s.dailyTargetMins=Math.max(0,Number(s.dailyTargetMins)||0);
   return s;
 }
-function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}if(typeof S.affirmation==="string"){affirmation=S.affirmation;try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}if(typeof S.affirmation==="string"){affirmation=S.affirmation;try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}S.wallet=S.wallet||{startDate:todayStr(),startAmount:0,penalty:0};}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 function switchExecutor(i){
   if(i===curExec)return;
@@ -832,12 +842,17 @@ function renderToday(){
       <input type="date" id="view-date" class="date-input" value="${t}" min="${dataMinDate()||t}" max="${gk}">
       ${t!==realToday?`<button class="btn ghost sm" data-act="view-today">回到今天</button><span class="badge rest">历史 / 未来日期</span>`:''}
     </div>
-    <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,300px) minmax(120px,160px);gap:10px;align-items:start">
+    <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(160px,260px) minmax(180px,300px) minmax(120px,160px);gap:10px;align-items:start">
       <div class="gk-line" style="min-width:0">
         <svg class="ico" viewBox="0 0 24 24" style="color:var(--primary);flex:0 0 22px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         <span style="font-weight:700;padding-top:2px">${esc(executorName)}，今天距离高考（${gk}）还有</span>
         <span class="gk-num" id="gk-day" data-target="${toGk}">0</span>
         <span style="font-weight:700;padding-top:2px">天</span>
+      </div>
+      <div class="wallet-box" style="padding:8px 12px;background:linear-gradient(135deg,#e0e7ff,#eef2ff);border-radius:10px;font-size:12px;line-height:1.5;border-left:3px solid #4338ca;color:#312e81">
+        <div style="font-weight:700;display:flex;align-items:center;gap:4px">👜 累计赚到</div>
+        <div style="font-size:20px;font-weight:900;color:#1e3a8a;margin:2px 0;letter-spacing:0.5px">¥(<span id="wallet-val">${walletTotal().toFixed(0)}</span>)</div>
+        <div class="hint" style="font-size:10px;color:#3730a3">起算 ${esc((S.wallet&&S.wallet.startDate)||todayStr())} · 初始 ${(S.wallet&&S.wallet.startAmount)||0} · 扣除 ${(S.wallet&&S.wallet.penalty)||0}</div>
       </div>
       <div class="affirm-box" style="padding:8px 12px;background:rgba(255,255,255,.55);border-radius:10px;font-size:12px;line-height:1.5;color:${affirmation?'var(--ink)':'var(--muted)'};border-left:3px solid var(--primary);white-space:pre-wrap">${affirmation?esc(affirmation):'<em>写下你的约定</em>'}</div>
       <div class="earn-box" style="padding:6px 10px;background:linear-gradient(135deg,#fef9c3,#fefce8);border-radius:8px;font-size:11px;line-height:1.35;border-left:3px solid #eab308">
@@ -1182,6 +1197,15 @@ function renderMine(){
         <label style="font-size:13px;font-weight:700">看板布局（今日页）</label>
         <div class="hint" style="margin:4px 0 6px">开启后今日页顶部改为看板样式：大圆环 + 实时赚到/错题/完成度指标卡 + 各科投入横条；关闭则保留原来的紧凑布局。</div>
         <div class="row-inline"><button class="btn ${dashMode?'primary':'ghost'} sm" data-act="toggle-dash">${dashMode?'已开启 ✓':'已关闭'}</button></div>
+      </div>
+      <div style="margin-top:14px">
+        <label style="font-size:13px;font-weight:700">累计赚到（钱包）</label>
+        <div class="hint" style="margin:4px 0 6px">起算日期后所有打卡的分钟 × 元/分钟，再加「初始值」减「扣除金额」= 累计赚到。三个值都在下面手动设置。</div>
+        <div class="row-inline"><label style="font-size:12px;color:var(--muted);flex:0 0 84px">起算日期</label><input id="wallet-start" type="date" value="${esc(((S.wallet&&S.wallet.startDate)||todayStr()))}" style="flex:1;font-size:14px"></div>
+        <div class="row-inline" style="margin-top:6px"><label style="font-size:12px;color:var(--muted);flex:0 0 84px">初始值（元）</label><input id="wallet-amount" type="number" step="0.01" value="${((S.wallet&&S.wallet.startAmount)||0)}" style="flex:1;font-size:14px"></div>
+        <div class="row-inline" style="margin-top:6px"><label style="font-size:12px;color:var(--muted);flex:0 0 84px">扣除金额（元）</label><input id="wallet-penalty" type="number" step="0.01" value="${((S.wallet&&S.wallet.penalty)||0)}" style="flex:1;font-size:14px"></div>
+        <button class="btn primary sm" data-act="save-wallet" style="margin-top:6px">保存钱包</button>
+      </div>
       </div>
       <div style="margin-top:14px">
         <label style="font-size:13px;font-weight:700">每天打卡时长目标（分钟）</label>
@@ -1893,6 +1917,10 @@ document.addEventListener("click",e=>{
   if(act==="save-yuan"){
     const v=Math.max(0,Number(document.getElementById("yuan-per-min").value)||0);
     setYuanPerMin(v);render();toast("每分钟奖励已保存为 "+yuanPerMin+" 元（"+executorName+"）");return;
+  }
+  if(act==="save-wallet"){
+    setWallet({startDate:document.getElementById("wallet-start").value,startAmount:document.getElementById("wallet-amount").value,penalty:document.getElementById("wallet-penalty").value});
+    render();toast("累计钱包已更新");return;
   }
   if(act==="toggle-reminder"){setReminderEnabled(!reminderEnabled);render();toast("学习提醒已"+(reminderEnabled?"开启":"关闭"));return;}
   if(act==="toggle-dash"){setDashMode(!dashMode);render();toast("看板布局已"+(dashMode?"开启":"关闭"));return;}

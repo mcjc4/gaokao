@@ -299,7 +299,7 @@ function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{loca
 function yuanKey(){return curExec===0?"gaokao_yuan_per_min":"gaokao_yuan_per_min_chenzihan";}
 function defaultYuan(){return 0.5;}
 let yuanPerMin=(()=>{const raw=localStorage.getItem(yuanKey());return raw===null?defaultYuan():Math.max(0,Number(raw)||0);})();
-function setYuanPerMin(v){yuanPerMin=Math.max(0,Number(v)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}
+function setYuanPerMin(v){yuanPerMin=Math.max(0,Number(v)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}if(S&&typeof S==="object"){S.yuanPerMin=yuanPerMin;save();}}
 const DASH_KEY="gaokao_dashboard_mode";
 let dashMode=(localStorage.getItem(DASH_KEY)||"1")==="1";
 function setDashMode(v){dashMode=!!v;try{localStorage.setItem(DASH_KEY,dashMode?"1":"0");}catch(e){}}
@@ -508,7 +508,7 @@ function migrate(s){
   if(s.dailyTargetMins!=null)s.dailyTargetMins=Math.max(0,Number(s.dailyTargetMins)||0);
   return s;
 }
-function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";if(S.dailyTargetMins!=null&&!localStorage.getItem(dailyKey())){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}if(typeof S.affirmation==="string"){affirmation=S.affirmation;try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 function switchExecutor(i){
   if(i===curExec)return;

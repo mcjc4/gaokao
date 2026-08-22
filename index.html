@@ -1216,9 +1216,7 @@ function renderMine(){
           <label style="font-size:13px;font-weight:700">扣除明细</label>
           <button class="btn primary sm" data-act="add-penalty">+ 新增扣除</button>
         </div>
-        <div id="penalty-list" style="margin-top:6px;display:flex;flex-direction:column;gap:6px">
-          ${((Array.isArray(S.wallet&&S.wallet.penaltyList)?S.wallet.penaltyList:[]).map((p,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:13px"><span style="color:#b91c1c;font-weight:700;flex:0 0 90px">${esc(p.date||"")}</span><span style="flex:0 0 80px;color:#b91c1c;font-weight:700">-¥${(Number(p.amount)||0).toFixed(2)}</span><span style="flex:1;color:var(--muted)">${esc(p.reason||"")}</span><button class="icon-btn del" data-act="del-penalty" data-i="${i}" title="删除"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join("")||'<div class="muted" style="font-size:12px;padding:6px 0">暂无扣除项</div>'}
-        </div>
+        <div id="penalty-list" style="margin-top:6px;display:flex;flex-direction:column;gap:6px">${(()=>{const pl=Array.isArray(S.wallet&&S.wallet.penaltyList)?S.wallet.penaltyList:[];if(!pl.length)return '<div class="muted" style="font-size:12px;padding:6px 0">暂无扣除项</div>';return pl.map((p,i)=>'<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:13px"><span style="color:#b91c1c;font-weight:700;flex:0 0 90px">'+esc(p.date||"")+'</span><span style="flex:0 0 80px;color:#b91c1c;font-weight:700">-¥'+(Number(p.amount)||0).toFixed(2)+'</span><span style="flex:1;color:var(--muted)">'+esc(p.reason||"")+'</span><button class="icon-btn del" data-act="del-penalty" data-i="'+i+'" title="删除"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>').join("");})()}</div>
         <button class="btn primary sm" data-act="save-wallet" style="margin-top:10px">保存钱包</button>
       </div>
       </div>

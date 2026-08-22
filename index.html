@@ -896,7 +896,7 @@ function renderToday(){
           <div class="stat" style="background:#f0fdf4;border-radius:10px;padding:10px;border-left:3px solid var(--green)"><span class="k">完成度</span><span class="v" style="font-size:18px;color:var(--green);margin:2px 0">${Math.round(pct*100)}%</span><span class="k" style="font-size:11px">${met?'已达标 🎉':'还差 '+remain+' 分'}</span></div>
         </div>
         <div style="margin-top:10px"><div class="hint" style="margin-bottom:4px">各科投入（分钟）</div>
-          ${todayMinDetail.map(d=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><span style="width:52px;font-size:12px;color:var(--muted);flex:0 0 52px">${esc(d.name)}</span><div style="flex:1;height:10px;background:var(--line);border-radius:6px;overflow:hidden"><div style="width:${(d.mins/barMax*100).toFixed(0)}%;height:100%;background:${d.color};border-radius:6px"></div></div><span style="width:46px;font-size:12px;text-align:right;color:var(--muted);flex:0 0 46px">${d.mins}分</span></div>`).join("")||'<div class="muted" style="font-size:12px">暂无分钟记录</div>'}
+          ${todayMinDetail.slice().sort((a,b)=>b.mins-a.mins).map(d=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><span style="width:52px;font-size:12px;color:var(--muted);flex:0 0 52px">${esc(d.name)}</span><div style="flex:1;height:10px;background:var(--line);border-radius:6px;overflow:hidden"><div style="width:${(d.mins/barMax*100).toFixed(0)}%;height:100%;background:${d.color};border-radius:6px"></div></div><span style="width:46px;font-size:12px;text-align:right;color:var(--muted);flex:0 0 46px">${d.mins}分</span></div>`).join("")||'<div class="muted" style="font-size:12px">暂无分钟记录</div>'}
         </div>
       </div>
     </div>

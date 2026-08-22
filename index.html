@@ -2375,8 +2375,8 @@ function badgePop(txt){
   if(celebrateLevel==="off")return;
   const root=document.getElementById("confetti-root");
   const b=document.createElement("div");
-  b.style.cssText="position:absolute;left:50%;top:42%;min-width:96px;max-width:240px;padding:0 14px;height:96px;border-radius:50%;transform:translate(-50%,-50%) scale(0);display:flex;align-items:center;justify-content:center;background:#16a34a;color:#fff;font-size:20px;font-weight:700;text-align:center;white-space:nowrap";
-  b.textContent=txt||"达成";
+  b.style.cssText="position:absolute;left:50%;top:42%;min-width:192px;min-height:192px;max-width:600px;padding:0 48px;border-radius:999px;transform:translate(-50%,-50%) scale(0);display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:40px;font-weight:800;text-align:center;white-space:nowrap;box-shadow:0 8px 30px rgba(245,158,11,.55);box-sizing:border-box";
+  b.textContent="💰 "+(txt||"达成");
   root.appendChild(b);
   requestAnimationFrame(()=>{b.style.transition="transform 500ms cubic-bezier(.2,1.4,.4,1),opacity 1.2s";b.style.transform="translate(-50%,-50%) scale(1)";});
   setTimeout(()=>{b.style.transform="translate(-50%,-50%) scale(1.18)";},850);

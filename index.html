@@ -849,13 +849,13 @@ function renderToday(){
       <input type="date" id="view-date" class="date-input" value="${t}" min="${dataMinDate()||t}" max="${gk}">
       ${t!==realToday?`<button class="btn ghost sm" data-act="view-today">回到今天</button><span class="badge rest">历史 / 未来日期</span>`:''}
     </div>
-    <div style="display:grid;grid-template-columns:minmax(260px,1.3fr) 1fr;gap:12px;align-items:stretch">
-      <div class="gk-card" style="padding:14px 16px;background:rgba(255,255,255,.6);border-radius:10px;display:flex;align-items:center;gap:16px;border-left:3px solid var(--primary)">
-        <svg class="ico" viewBox="0 0 24 24" style="color:var(--primary);flex:0 0 30px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:stretch">
+      <div class="gk-card" style="padding:10px 12px;background:rgba(255,255,255,.6);border-radius:10px;display:flex;align-items:center;gap:10px;border-left:3px solid var(--primary)">
+        <svg class="ico" viewBox="0 0 24 24" style="color:var(--primary);flex:0 0 22px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
         <div style="min-width:0">
-          <div style="font-size:12px;color:var(--muted);font-weight:600">${esc(executorName)} · 距离高考（${gk}）还有</div>
-          <div style="line-height:1"><span class="gk-num" id="gk-day" data-target="${toGk}" style="font-size:60px;font-weight:900;color:var(--primary);letter-spacing:1px">0</span> <span style="font-size:18px;font-weight:700;color:var(--ink)">天</span></div>
-          <div class="hint" style="font-size:11px">今天 ${realToday}</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600">${esc(executorName)} · 距离高考（${gk}）还有</div>
+          <div style="line-height:1"><span class="gk-num" id="gk-day" data-target="${toGk}" style="font-size:40px;font-weight:900;color:var(--primary);letter-spacing:1px">0</span> <span style="font-size:14px;font-weight:700;color:var(--ink)">天</span></div>
+          <div class="hint" style="font-size:10px">今天 ${realToday}</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-content:start">

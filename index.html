@@ -355,10 +355,12 @@ const DEFAULT_PUSH_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=20
 const DEFAULT_PUSH_PROXY="https://young-hat-353c.mcjc4.workers.dev/";
 const DEFAULT_PUSH_TOKEN="445f103035b642bf9063688feea05c2b";
 const DEFAULT_PUSH_TOPIC="chen-study";
+const DEFAULT_PUSH_FEISHU="https://open.feishu.cn/open-apis/bot/v2/hook/4622e2a3-8c25-4136-a85f-434e7aec008b";
 let pushEnabled=(localStorage.getItem(PUSH_KEY)!=="0");
 let pushDingEnabled=(localStorage.getItem("gaokao_push_ding_on")||"1")==="1";
-let pushFeishuEnabled=(localStorage.getItem("gaokao_push_feishu_on")||"0")==="1";
+let pushFeishuEnabled=(localStorage.getItem("gaokao_push_feishu_on")||"1")==="1";
 let pushPushplusEnabled=(localStorage.getItem("gaokao_push_pp_on")||"1")==="1";
+let pushFeishuWebhook=localStorage.getItem("gaokao_push_feishu_hook")||DEFAULT_PUSH_FEISHU;
 let pushWebhook=localStorage.getItem("gaokao_push_webhook");
 if(!pushWebhook||pushWebhook.includes("f18b56e9a884bdd2c9a933e1994ad7856ba0e1fce2404d366589a218c1683f1e")){
   pushWebhook=DEFAULT_PUSH_WEBHOOK;
@@ -371,6 +373,7 @@ let pushTopic=(localStorage.getItem("gaokao_push_topic")||DEFAULT_PUSH_TOPIC);
 function setPushEnabled(v){pushEnabled=!!v;try{localStorage.setItem(PUSH_KEY,pushEnabled?"1":"0");}catch(e){}}
 function setPushDingEnabled(v){pushDingEnabled=!!v;try{localStorage.setItem("gaokao_push_ding_on",pushDingEnabled?"1":"0");}catch(e){}}
 function setPushFeishuEnabled(v){pushFeishuEnabled=!!v;try{localStorage.setItem("gaokao_push_feishu_on",pushFeishuEnabled?"1":"0");}catch(e){}}
+function setPushFeishuWebhook(v){pushFeishuWebhook=(v||"").trim();try{localStorage.setItem("gaokao_push_feishu_hook",pushFeishuWebhook);}catch(e){}}
 function setPushPushplusEnabled(v){pushPushplusEnabled=!!v;try{localStorage.setItem("gaokao_push_pp_on",pushPushplusEnabled?"1":"0");}catch(e){}}
 function setPushWebhook(v){pushWebhook=(v||"").trim();try{localStorage.setItem("gaokao_push_webhook",pushWebhook);}catch(e){}}
 function setPushToken(v){pushToken=(v||"").trim();try{localStorage.setItem("gaokao_push_token",pushToken);}catch(e){}}
@@ -396,7 +399,7 @@ async function dingSign(secret){
 function pushCheckinNotify(cur){
   if(!pushEnabled)return;
   const hasDing=pushDingEnabled&&pushWebhook;
-  const hasFeishu=pushFeishuEnabled&&pushWebhook;
+  const hasFeishu=pushFeishuEnabled&&pushFeishuWebhook;
   const hasPP=pushPushplusEnabled&&(pushToken||"").trim();
   if(!hasDing&&!hasFeishu&&!hasPP)return;
   const t=todayStr();
@@ -437,7 +440,11 @@ function pushCheckinNotify(cur){
   // 飞书
   if(hasFeishu){
     const payload={msg_type:"text",content:{text}};
-    viaProxy(pushWebhook,payload);
+    if(pushProxy){
+      fetch(pushProxy,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:pushFeishuWebhook,payload})}).catch(()=>{});
+    }else{
+      fetch(pushFeishuWebhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
+    }
   }
   // 微信 PushPlus
   if(hasPP){
@@ -1283,7 +1290,10 @@ function renderMine(){
           <label style="display:flex;align-items:center;gap:4px;font-size:14px"><input type="checkbox" id="push-pp" ${pushPushplusEnabled?'checked':''}> 微信 PushPlus</label>
         </div>
         <div class="field-row" style="margin-top:8px">
-          <div style="flex:2"><label>Webhook 地址（钉钉/飞书）</label><input id="push-webhook" value="${esc(pushWebhook)}" placeholder="粘贴群机器人 Webhook"></div>
+          <div style="flex:2"><label>钉钉 Webhook</label><input id="push-webhook" value="${esc(pushWebhook)}" placeholder="钉钉群机器人 Webhook"></div>
+        </div>
+        <div class="field-row" style="margin-top:8px">
+          <div style="flex:2"><label>飞书 Webhook</label><input id="push-feishu-hook" value="${esc(pushFeishuWebhook)}" placeholder="飞书群机器人 Webhook"></div>
         </div>
         <div class="field-row" style="margin-top:8px">
           <div style="flex:1"><label>PushPlus Token（微信推送）</label><input id="push-token" value="${esc(pushToken)}" placeholder="pushplus 公众号获取"></div>
@@ -1985,6 +1995,7 @@ document.addEventListener("click",e=>{
     setPushFeishuEnabled(document.getElementById("push-feishu").checked);
     setPushPushplusEnabled(document.getElementById("push-pp").checked);
     setPushWebhook(document.getElementById("push-webhook").value);
+    setPushFeishuWebhook(document.getElementById("push-feishu-hook").value);
     setPushToken(document.getElementById("push-token").value);
     setPushTopic(document.getElementById("push-topic").value);
     setPushSecret(document.getElementById("push-secret").value);

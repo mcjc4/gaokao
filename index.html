@@ -858,7 +858,7 @@ function renderToday(){
           <div class="hint" style="font-size:10px">今天 ${realToday}</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-content:start">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start">
         <div class="wallet-box" style="padding:10px 14px;background:linear-gradient(135deg,#e0e7ff,#eef2ff);border-radius:10px;font-size:12px;line-height:1.5;border-left:3px solid #4338ca;color:#312e81;display:flex;flex-direction:column;justify-content:center">
           <div style="font-weight:700;display:flex;align-items:center;gap:4px">👜 累计赚到</div>
           <div style="font-size:20px;font-weight:900;color:#1e3a8a;margin:2px 0;letter-spacing:0.5px">¥<span id="wallet-val">${walletTotal().toFixed(0)}</span></div>

@@ -330,7 +330,7 @@ function affirmKey(){return curExec===0?"gaokao_affirmation":"gaokao_affirmation
 let affirmation=localStorage.getItem(affirmKey())||"";
 function setAffirmation(v){affirmation=(v||"").trim();try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}if(S&&typeof S==="object"){S.affirmation=affirmation;save();}}
 const PUSH_KEY="gaokao_push_on";
-const DEFAULT_PUSH_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=f18b56e9a884bdd2c9a933e1994ad7856ba0e1fce2404d366589a218c1683f1e";
+const DEFAULT_PUSH_WEBHOOK="https://oapi.dingtalk.com/robot/send?access_token=20b2c845ee30d22e35c3435302645bb6bc68fa3d8d025de31df458d2883bf528";
 const DEFAULT_PUSH_PROXY="https://young-hat-353c.mcjc4.workers.dev/";
 const DEFAULT_PUSH_TOKEN="445f103035b642bf9063688feea05c2b";
 const DEFAULT_PUSH_TOPIC="chen-study";
@@ -338,7 +338,11 @@ let pushEnabled=(localStorage.getItem(PUSH_KEY)!=="0");
 let pushDingEnabled=(localStorage.getItem("gaokao_push_ding_on")||"1")==="1";
 let pushFeishuEnabled=(localStorage.getItem("gaokao_push_feishu_on")||"0")==="1";
 let pushPushplusEnabled=(localStorage.getItem("gaokao_push_pp_on")||"1")==="1";
-let pushWebhook=(localStorage.getItem("gaokao_push_webhook")||DEFAULT_PUSH_WEBHOOK);
+let pushWebhook=localStorage.getItem("gaokao_push_webhook");
+if(!pushWebhook||pushWebhook.includes("f18b56e9a884bdd2c9a933e1994ad7856ba0e1fce2404d366589a218c1683f1e")){
+  pushWebhook=DEFAULT_PUSH_WEBHOOK;
+  try{localStorage.setItem("gaokao_push_webhook",pushWebhook);}catch(e){}
+}
 let pushSecret=(localStorage.getItem("gaokao_push_secret")||"");
 let pushProxy=(localStorage.getItem("gaokao_push_proxy")||DEFAULT_PUSH_PROXY);
 let pushToken=(localStorage.getItem("gaokao_push_token")||DEFAULT_PUSH_TOKEN);

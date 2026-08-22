@@ -295,7 +295,7 @@ const DAILY_KEY="gaokao_daily_target";
 function dailyKey(){return curExec===0?"gaokao_daily_target":"gaokao_daily_target_chenzihan";}
 function defaultDaily(){return curExec===0?600:300;}
 let dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
-function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}
+function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}S.dailyTargetMins=dailyTargetMins;save();}
 function yuanKey(){return curExec===0?"gaokao_yuan_per_min":"gaokao_yuan_per_min_chenzihan";}
 function defaultYuan(){return 0.5;}
 let yuanPerMin=(()=>{const raw=localStorage.getItem(yuanKey());return raw===null?defaultYuan():Math.max(0,Number(raw)||0);})();
@@ -484,9 +484,10 @@ function migrate(s){
   });
   s.weeklyNotes=s.weeklyNotes||{};
   s.affirmation=s.affirmation||"";
+  if(s.dailyTargetMins!=null)s.dailyTargetMins=Math.max(0,Number(s.dailyTargetMins)||0);
   return s;
 }
-function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";if(S.dailyTargetMins!=null&&!localStorage.getItem(dailyKey())){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 function switchExecutor(i){
   if(i===curExec)return;

@@ -213,6 +213,10 @@
   #confetti-root{position:fixed;inset:0;pointer-events:none;z-index:100;overflow:hidden}
   .confetti-piece{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;animation:fall 1.7s ease-in forwards}
   @keyframes fall{to{top:108%;transform:translateY(60vh) rotate(680deg);opacity:0}}
+  .badge-money{display:inline-block;animation:badge-money-swing .8s ease-in-out infinite}
+  .badge-amt{display:inline-block;animation:badge-amt-bounce .55s ease-in-out infinite}
+  @keyframes badge-money-swing{0%,100%{transform:rotate(-14deg) translateY(0)}50%{transform:rotate(14deg) translateY(-6px)}}
+  @keyframes badge-amt-bounce{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-12px) scale(1.18)}60%{transform:translateY(4px) scale(.96)}80%{transform:translateY(-5px) scale(1.06)}}
 
   .empty{text-align:center;color:var(--muted);padding:40px 10px}
   .empty .big{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
@@ -426,7 +430,7 @@ function pushCheckinNotify(cur){
   }
 }
 const REMIND_PHRASES=["现在开始，就不晚。","你比昨天的自己更接近梦想。","刷一题是一题，积少成多。","先专注 25 分钟，动起来。","离高考又近了一天，加油。","别让今天的犹豫，变成明天的遗憾。","把手机放下，翻开书。","每一分钟，都在为未来加权。"];
-function onGoalDone(minutes){if(celebrateLevel==="off")return;celebrate();fireworks();badgePop("赚了 ¥"+Math.max(0,(Number(minutes)||0)*yuanPerMin).toFixed(0));}
+function onGoalDone(minutes){if(celebrateLevel==="off")return;celebrate();fireworks();badgePop("¥"+Math.max(0,(Number(minutes)||0)*yuanPerMin).toFixed(0));}
 const PALETTE=["#7c5cff","#16a34a","#e08a00","#e23b3b","#0ea5e9","#db2777","#65a30d","#9333ea"];
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -1142,7 +1146,7 @@ function renderMine(){
       </div>
       <div style="margin-top:14px">
         <label style="font-size:13px;font-weight:700">庆祝动效</label>
-        <div class="hint" style="margin:4px 0 6px">每次打卡：彩带 + 烟花 + 「赚了 ¥X」徽章（X = 本次分钟 × 每分钟奖励）；关闭则不显示动效。</div>
+        <div class="hint" style="margin:4px 0 6px">每次打卡：彩带 + 烟花 + 金黄色「💰 ¥X」徽章（X = 本次分钟 × 每分钟奖励）；关闭则不显示动效。</div>
         <div class="row-inline">
           <select id="celebrate-level" style="flex:1;font-size:14px">
             <option value="off" ${celebrateLevel==="off"?"selected":""}>关闭</option>
@@ -2375,8 +2379,8 @@ function badgePop(txt){
   if(celebrateLevel==="off")return;
   const root=document.getElementById("confetti-root");
   const b=document.createElement("div");
-  b.style.cssText="position:absolute;left:50%;top:42%;min-width:192px;min-height:192px;max-width:600px;padding:0 48px;border-radius:999px;transform:translate(-50%,-50%) scale(0);display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;font-size:40px;font-weight:800;text-align:center;white-space:nowrap;box-shadow:0 8px 30px rgba(245,158,11,.55);box-sizing:border-box";
-  b.textContent="💰 "+(txt||"达成");
+  b.style.cssText="position:absolute;left:50%;top:42%;min-width:192px;min-height:192px;max-width:600px;padding:0 48px;border-radius:999px;transform:translate(-50%,-50%) scale(0);display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;text-align:center;white-space:nowrap;box-shadow:0 8px 30px rgba(245,158,11,.55);box-sizing:border-box";
+  b.innerHTML=`<span class="badge-money" style="font-size:56px">💰</span><span class="badge-amt" style="font-size:48px;font-weight:800">${esc(txt||"¥0")}</span>`;
   root.appendChild(b);
   requestAnimationFrame(()=>{b.style.transition="transform 500ms cubic-bezier(.2,1.4,.4,1),opacity 1.2s";b.style.transform="translate(-50%,-50%) scale(1)";});
   setTimeout(()=>{b.style.transform="translate(-50%,-50%) scale(1.18)";},850);

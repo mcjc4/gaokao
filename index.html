@@ -386,7 +386,7 @@ function updateExecNav(){
     const other=cur===0?1:0;
     const otherName=(EXECUTORS[other]&&EXECUTORS[other].name)||"";
     const curName=(EXECUTORS[cur]&&EXECUTORS[cur].name)||executorName||"";
-    el.innerHTML=`<div style="font-size:20px;font-weight:800;color:var(--primary);white-space:nowrap;line-height:1.2;width:100%">👤 ${esc(curName)}</div><button class="btn ghost sm" data-act="switch-exec" data-i="${other}" title="切到 ${esc(otherName)}" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px">切到 ${esc(otherName)}</button>`;
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;width:100%"><div style="font-size:18px;font-weight:800;color:var(--primary);white-space:nowrap;line-height:1.2;flex:1;min-width:0">👤 ${esc(curName)}</div><button class="btn ghost sm" data-act="switch-exec" data-i="${other}" title="切到 ${esc(otherName)}" style="font-size:12px;padding:5px 8px;white-space:nowrap;flex-shrink:0">→ ${esc(otherName)}</button></div>`;
   }
 }
 async function dingSign(secret){

@@ -383,8 +383,11 @@ function setPushProxy(v){pushProxy=(v||"").trim();try{localStorage.setItem("gaok
 function updateExecNav(){
   const el=document.getElementById("nav-exec-display");
   if(el){
-    const name=executorName||curCfg().name;
-    el.innerHTML=`<svg class="ico ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> <span>当前执行人：<b>${esc(name)}</b></span><span class="hint" style="font-weight:400">（切换到「我的」页）</span>`;
+    const cur=curExec;
+    const other=cur===0?1:0;
+    const otherName=(EXECUTORS[other]&&EXECUTORS[other].name)||"";
+    const curName=(EXECUTORS[cur]&&EXECUTORS[cur].name)||executorName||"";
+    el.innerHTML=`<svg class="ico ico-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> <span>当前：<b>${esc(curName)}</b></span><button class="btn ghost sm" data-act="switch-exec" data-i="${other}" style="margin-left:4px;padding:2px 8px;font-size:12px">切到 ${esc(otherName)}</button>`;
   }
 }
 async function dingSign(secret){

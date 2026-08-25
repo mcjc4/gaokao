@@ -549,7 +549,8 @@ function switchExecutor(i){
   render();
   if(cloudCfg&&cloudCfg.url&&cloudCfg.key&&!cloudCfg.disabled){
     cloudReady=false;cloudStatus='connecting';renderMineSafe();
-    pullCloud(false,true).then(()=>{cloudReady=true;cloudStatus='online';renderMineSafe();}).catch(()=>{cloudStatus='error';renderMineSafe();});
+    // 关键防护：本机已有该执行人数据时，切换不强制用云端覆盖本地（避免云端被污染的数据反向覆盖本地正确数据）
+    pullCloud(false,freshPreset).then(()=>{cloudReady=true;cloudStatus='online';renderMineSafe();}).catch(()=>{cloudStatus='error';renderMineSafe();});
   }
 }
 
@@ -609,8 +610,9 @@ async function initCloud(force){
   }catch(e){console.warn("Cloud init failed:",e);cloudReady=false;cloudStatus='error';}
   renderMineSafe();
 }
-async function pushCloud(){
-  if(!cloudReady||!cloudCfg)return;
+async function pushCloud(force){
+  if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
+  if(!force&&!cloudReady)return;
   try{
     const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}`;
     const headers=Object.assign(sbHeaders(cloudCfg.key,true),{'Prefer':'resolution=merge-duplicates'});
@@ -1332,11 +1334,11 @@ function renderMine(){
         <button class="btn primary sm" data-act="cloud-save">保存并连接</button>
       </div>
       <div class="hint" style="margin-top:8px">状态：<b style="color:${cloudStatus==='online'?'var(--primary)':'var(--red)'}">${cloudStatusText()}</b></div>
-      ${cloudReady?`<div class="row-inline" style="margin-top:8px;flex-wrap:wrap;gap:6px">
+      <div class="row-inline" style="margin-top:8px;flex-wrap:wrap;gap:6px">
         <button class="btn ghost sm" data-act="cloud-pull" title="用云端数据覆盖本地">从云端同步到本地</button>
-        <button class="btn ghost sm" data-act="cloud-push" title="把本地数据上传覆盖云端">从本地同步到云端</button>
+        <button class="btn ghost sm" data-act="cloud-push" title="把本地数据上传覆盖云端（用于恢复被污染的云端数据）">从本地同步到云端</button>
         <button class="btn ghost sm" data-act="cloud-off">断开云端</button>
-      </div>`:''}
+      </div>
     </div>
 
     <div class="danger-zone">
@@ -2146,7 +2148,7 @@ document.addEventListener("click",e=>{
     doPull();return;
   }
   if(act==="cloud-push"){
-    const doPush=()=>{toast("正在从本地同步到云端…",1500);pushCloud();setCloudSyncAt(S.updatedAt||Date.now());toast("已同步到云端",1500);};
+    const doPush=()=>{toast("正在从本地同步到云端…",1500);pushCloud(true).then(()=>{setCloudSyncAt(S.updatedAt||Date.now());toast("已同步到云端（以本机为准）",1500);}).catch(()=>toast("推送失败，检查网络或配置",1500));};
     fetchCloudMeta().then(meta=>{
       const remoteUp=meta?new Date(meta).getTime()||0:0;
       if(remoteUp>cloudSyncAt()){openConfirm("云端自上次同步后有新数据。推送到云端将覆盖云端这些新数据，且不可恢复。确定继续？",doPush);return;}

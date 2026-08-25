@@ -622,6 +622,12 @@ async function pushCloud(force){
     setCloudSyncAt(S.updatedAt||Date.now());
   }catch(e){console.warn("push failed:",e);}
 }
+/* 数据内容比较（忽略 updatedAt 时间戳），用于跨执行人污染检测 */
+function sameData(a,b){
+  if(!a||!b)return false;
+  const strip=o=>{const c=JSON.parse(JSON.stringify(o));delete c.updatedAt;return JSON.stringify(c);};
+  return strip(a)===strip(b);
+}
 async function pullCloud(silent, force){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
   if(cloudCfg.disabled)return;
@@ -637,10 +643,28 @@ async function pullCloud(silent, force){
       const localUp=S.updatedAt||0;
       if(force||remoteUp>localUp){
         const payload=typeof row.data==='string'?JSON.parse(row.data):row.data;
-        S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
-        affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";
-        if(curTab)render();
-        if(!silent&&curTab)toast("已同步云端最新数据");
+        // 跨执行人污染防护：云端文档若与"另一执行人的本地数据"完全相同（且不同于当前本地），判定为被错误覆盖的污染文档，拒绝拉取
+        const otherIdx=curExec===0?1:0;
+        const otherKey=(EXECUTORS[otherIdx]&&EXECUTORS[otherIdx].storeKey)||"";
+        let polluted=false;
+        if(otherKey){
+          try{
+            const otherRaw=localStorage.getItem(otherKey);
+            if(otherRaw&&!sameData(payload,S)){
+              const otherS=JSON.parse(otherRaw);
+              if(sameData(payload,otherS))polluted=true;
+            }
+          }catch(e){}
+        }
+        if(polluted){
+          if(!silent)toast("⚠️ 云端数据疑似与另一执行人相同（可能被错误覆盖），已拒绝拉取");
+          console.warn("pollution guard: cloud doc identical to other executor local data");
+        }else{
+          S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
+          affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";
+          if(curTab)render();
+          if(!silent&&curTab)toast("已同步云端最新数据");
+        }
       }
     }
   }catch(e){console.warn("pull failed:",e);throw e;}

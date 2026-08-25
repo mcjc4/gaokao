@@ -292,7 +292,7 @@ if(!["off","light","fancy"].includes(celebrateLevel))celebrateLevel="fancy";
 function setCelebrateLevel(v){if(!["off","light","fancy"].includes(v))v="fancy";celebrateLevel=v;try{localStorage.setItem(CELE_KEY,v);}catch(e){}}
 const DAILY_KEY="gaokao_daily_target";
 function dailyKey(){return curExec===0?"gaokao_daily_target":"gaokao_daily_target_chenzihan";}
-function defaultDaily(){return curExec===0?600:300;}
+function defaultDaily(){return curExec===0?600:360;}
 let dailyTargetMins=(()=>{const raw=localStorage.getItem(dailyKey());return raw===null?defaultDaily():Math.max(0,Number(raw)||0);})();
 function setDailyTargetMins(v){dailyTargetMins=Math.max(0,Number(v)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}S.dailyTargetMins=dailyTargetMins;save();}
 function yuanKey(){return curExec===0?"gaokao_yuan_per_min":"gaokao_yuan_per_min_chenzihan";}
@@ -661,6 +661,9 @@ async function pullCloud(silent, force){
           console.warn("pollution guard: cloud doc identical to other executor local data");
         }else{
           S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
+          // 同步云端用户配置到全局变量（每天目标/元每分钟/约定），否则其他设备拉到云端值也显示不出来
+          if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}
+          if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}
           affirmation=S.affirmation||localStorage.getItem(affirmKey())||"";
           if(curTab)render();
           if(!silent&&curTab)toast("已同步云端最新数据");
@@ -1258,7 +1261,7 @@ function renderMine(){
       </div>
       <div style="margin-top:14px">
         <label style="font-size:13px;font-weight:700">每天打卡时长目标（分钟）</label>
-        <div class="hint" style="margin:4px 0 6px">用于今日页「打卡剩余时长」计算（剩余 = 目标 − 当天已勾选时长）。每个执行人单独设置：${executorName} 当前目标 ${dailyTargetMins} 分钟（默认：陈昕言 600 / 陈梓涵 300）。</div>
+        <div class="hint" style="margin:4px 0 6px">用于今日页「打卡剩余时长」计算（剩余 = 目标 − 当天已勾选时长）。每个执行人单独设置：${executorName} 当前目标 ${dailyTargetMins} 分钟（默认：陈昕言 600 / 陈梓涵 360，保存后云端同步，所有设备自动生效）。</div>
         <div class="row-inline">
           <input id="daily-target" type="number" min="0" step="10" value="${dailyTargetMins}" style="flex:1;font-size:14px">
           <button class="btn primary sm" data-act="save-daily">保存</button>

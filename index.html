@@ -614,6 +614,22 @@ async function pushCloud(force){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
   if(!force&&!cloudReady)return;
   try{
+    // 云端版本保护：推送前先查云端 updated_at，若云端比本地新 → 拒绝用旧数据覆盖云端（防止多设备竞态：旧数据回写覆盖新数据）
+    if(!force){
+      const meta=await fetchCloudMeta();
+      const remoteUp=meta?new Date(meta).getTime()||0:0;
+      const localUp=S.updatedAt||0;
+      if(remoteUp>localUp){
+        const dirty=(localUp>cloudSyncAt());
+        console.warn("push guard: cloud newer than local, skip push"+(dirty?" (local dirty)":""));
+        if(dirty){
+          if(curTab)toast("⚠️ 云端有更新且本机有未同步修改，为避免覆盖已暂停上传；请到「我的→云端共享」选择方向");
+        }else{
+          pullCloud(false).catch(()=>{});
+        }
+        return;
+      }
+    }
     const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}`;
     const headers=Object.assign(sbHeaders(cloudCfg.key,true),{'Prefer':'resolution=merge-duplicates'});
     const body=JSON.stringify({id:curCloudId(),data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()});
@@ -642,6 +658,12 @@ async function pullCloud(silent, force){
       const remoteUp=new Date(row.updated_at||0).getTime()||0;
       const localUp=S.updatedAt||0;
       if(force||remoteUp>localUp){
+        // 本地有未推送修改且云端更新 → 自动拉取会覆盖本地修改，跳过（不打断用户）
+        const localDirty=(S.updatedAt||0)>cloudSyncAt();
+        if(localDirty&&!force){
+          console.warn("pull guard: local dirty, skip auto pull");
+          return;
+        }
         const payload=typeof row.data==='string'?JSON.parse(row.data):row.data;
         // 跨执行人污染防护：云端文档若与"另一执行人的本地数据"完全相同（且不同于当前本地），判定为被错误覆盖的污染文档，拒绝拉取
         const otherIdx=curExec===0?1:0;

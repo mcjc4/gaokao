@@ -628,11 +628,9 @@ async function pushCloud(force){
       if(remoteUp>Math.max(baseUp,0)){
         const dirty=(localUp>cloudSyncAt());
         console.warn("push guard: cloud newer than base version, skip push"+(dirty?" (local dirty)":""));
-        if(dirty){
-          if(curTab)toast("⚠️ 云端有更新且本机有未同步修改，为避免覆盖已暂停上传；请到「我的→云端共享」选择方向");
-        }else{
-          pullCloud(false).catch(()=>{});
-        }
+        // 云端优先：无论本机是否有未同步修改，都拉取云端最新（有修改时 pullCloud 内部会先备份本地）
+        if(dirty&&curTab)toast("⚠️ 云端有更新，本机未同步修改已自动备份，正在同步云端最新数据…");
+        pullCloud(false).catch(()=>{});
         return;
       }
     }
@@ -667,8 +665,12 @@ async function pullCloud(silent, force){
         // 本地有未推送修改且云端更新 → 自动拉取会覆盖本地修改，跳过（不打断用户）
         const localDirty=(S.updatedAt||0)>cloudSyncAt();
         if(localDirty&&!force){
-          console.warn("pull guard: local dirty, skip auto pull");
-          return;
+          // 云端更新且本地有未同步修改：先备份本地，再以云端为准覆盖（云端优先策略）
+          try{
+            const raw=localStorage.getItem(curStoreKey());
+            if(raw)localStorage.setItem(curStoreKey()+"_prepull_backup",raw);
+          }catch(e){}
+          console.warn("pull guard: local dirty, backup local then overwrite with cloud");
         }
         const payload=typeof row.data==='string'?JSON.parse(row.data):row.data;
         // 跨执行人污染防护：云端文档若与"另一执行人的本地数据"完全相同（且不同于当前本地），判定为被错误覆盖的污染文档，拒绝拉取
@@ -1393,6 +1395,7 @@ function renderMine(){
         <button class="btn ghost sm" data-act="cloud-pull" title="用云端数据覆盖本地">从云端同步到本地</button>
         <button class="btn ghost sm" data-act="cloud-push" title="把本地数据上传覆盖云端（用于恢复被污染的云端数据）">从本地同步到云端</button>
         <button class="btn ghost sm" data-act="cloud-off">断开云端</button>
+        <button class="btn ghost sm" data-act="restore-backup" title="恢复最近一次被云端覆盖的本地修改（自动备份）">恢复本地备份</button>
       </div>
     </div>
 
@@ -2212,6 +2215,19 @@ document.addEventListener("click",e=>{
     return;
   }
   if(act==="cloud-off"){cloudReady=false;cloudStatus='off';if(syncTimer)clearInterval(syncTimer);cloudCfg=Object.assign({},cloudCfg,{disabled:true});saveCloudCfg(cloudCfg);renderMineSafe();toast("已断开云端，改用本机存储");return;}
+  if(act==="restore-backup"){
+    try{
+      const raw=localStorage.getItem(curStoreKey()+"_prepull_backup");
+      if(!raw){toast("没有可恢复的备份");return;}
+      openConfirm("将用备份数据覆盖当前本地数据并上传云端，确定？",()=>{
+        S=migrate(JSON.parse(raw));S.updatedAt=Date.now();setBaseUp(S.updatedAt);
+        try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
+        pushCloud(true).then(()=>{setCloudSyncAt(S.updatedAt);setBaseUp(S.updatedAt);toast("已恢复本地备份并上传云端");}).catch(()=>{toast("已恢复本地，云端上传失败");});
+        render();
+      });
+    }catch(e){toast("恢复失败："+e.message);}
+    return;
+  }
   if(act==="week-prev"){weekCursor=addDays(weekCursor,-7);render();return;}
   if(act==="week-next"){if(weekCursor<weekStart(todayStr())){weekCursor=addDays(weekCursor,7);render();}return;}
   if(act==="gen-report"){genReport(el.dataset.ws);return;}

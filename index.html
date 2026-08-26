@@ -533,7 +533,7 @@ function migrate(s){
   if(s.dailyTargetMins!=null)s.dailyTargetMins=Math.max(0,Number(s.dailyTargetMins)||0);
   return s;
 }
-function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}if(typeof S.affirmation==="string"){affirmation=S.affirmation;try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}S.wallet=S.wallet||{startDate:todayStr(),startAmount:0,penalty:0};}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
+function load(){try{const raw=localStorage.getItem(curStoreKey());if(!raw){S=buildPreset();freshPreset=true;/* 关键：不立即 save/pushCloud，避免新机器预置覆盖云端已有真实数据。等 initCloud pullCloud 后再决定。 */}else S=migrate(JSON.parse(raw));setBaseUp(S.updatedAt||0);if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}if(typeof S.affirmation==="string"){affirmation=S.affirmation;try{localStorage.setItem(affirmKey(),affirmation);}catch(e){}}S.wallet=S.wallet||{startDate:todayStr(),startAmount:0,penalty:0};}catch(e){console.warn(e);S=buildPreset();freshPreset=true;}}
 function save(){try{S.updatedAt=Date.now();localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){toast("保存失败："+e.message);}pushCloud();}
 function switchExecutor(i){
   if(i===curExec)return;
@@ -562,8 +562,12 @@ function switchExecutor(i){
 const CLOUD_CFG_KEY="gaokao_cloud_cfg";
 const CLOUD_TABLE="gaokao_state";
 const CLOUD_DOC_ID="main";const CLOUD_SYNC_KEY="gaokao_cloud_sync_at";
-function cloudSyncAt(){return Number(localStorage.getItem(CLOUD_SYNC_KEY))||0;}
-function setCloudSyncAt(ts){try{localStorage.setItem(CLOUD_SYNC_KEY,String(ts));}catch(e){}}
+function cloudSyncAt(){return Number(localStorage.getItem(CLOUD_SYNC_KEY+"_"+curCloudId()))||0;}
+function setCloudSyncAt(ts){try{localStorage.setItem(CLOUD_SYNC_KEY+"_"+curCloudId(),String(ts));}catch(e){}}
+// 数据基准版本：记录当前 S 内容是从哪个版本加载/同步来的（按执行人隔离）
+function baseUpKey(){return curStoreKey()+"_syncbase";}
+function getBaseUp(){return Number(localStorage.getItem(baseUpKey()))||0;}
+function setBaseUp(v){try{localStorage.setItem(baseUpKey(),String(v));}catch(e){}}
 // 内置默认云端配置：新机器第一次打开网页即可直接连接，无需手动填写
 const DEFAULT_CLOUD_URL="https://vajgltnfpdjpnsoknoma.supabase.co";
 const DEFAULT_CLOUD_KEY="sb_publishable_WkudOiZ5UwD0VhwquRsUBA_LkBhSyoN";
@@ -614,14 +618,16 @@ async function pushCloud(force){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
   if(!force&&!cloudReady)return;
   try{
-    // 云端版本保护：推送前先查云端 updated_at，若云端比本地新 → 拒绝用旧数据覆盖云端（防止多设备竞态：旧数据回写覆盖新数据）
+    // 云端版本保护：推送前先查云端 updated_at，若云端比"本机数据基准版本"新 → 拒绝用旧数据覆盖云端
+    // （基准版本 = 这份数据实际加载/同步时的版本，防止旧数据被 save() 盖上新时间戳后绕过校验）
     if(!force){
       const meta=await fetchCloudMeta();
       const remoteUp=meta?new Date(meta).getTime()||0:0;
       const localUp=S.updatedAt||0;
-      if(remoteUp>localUp){
+      const baseUp=getBaseUp();
+      if(remoteUp>Math.max(baseUp,0)){
         const dirty=(localUp>cloudSyncAt());
-        console.warn("push guard: cloud newer than local, skip push"+(dirty?" (local dirty)":""));
+        console.warn("push guard: cloud newer than base version, skip push"+(dirty?" (local dirty)":""));
         if(dirty){
           if(curTab)toast("⚠️ 云端有更新且本机有未同步修改，为避免覆盖已暂停上传；请到「我的→云端共享」选择方向");
         }else{
@@ -635,7 +641,7 @@ async function pushCloud(force){
     const body=JSON.stringify({id:curCloudId(),data:S,updated_at:new Date(S.updatedAt||Date.now()).toISOString()});
     const res=await fetch(url,{method:'POST',headers,body});
     if(!res.ok)throw new Error('http '+res.status);
-    setCloudSyncAt(S.updatedAt||Date.now());
+    setCloudSyncAt(S.updatedAt||Date.now());setBaseUp(S.updatedAt||Date.now());
   }catch(e){console.warn("push failed:",e);}
 }
 /* 数据内容比较（忽略 updatedAt 时间戳），用于跨执行人污染检测 */
@@ -682,7 +688,7 @@ async function pullCloud(silent, force){
           if(!silent)toast("⚠️ 云端数据疑似与另一执行人相同（可能被错误覆盖），已拒绝拉取");
           console.warn("pollution guard: cloud doc identical to other executor local data");
         }else{
-          S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
+          S=migrate(payload);S.updatedAt=remoteUp;setCloudSyncAt(remoteUp);setBaseUp(remoteUp);try{localStorage.setItem(curStoreKey(),JSON.stringify(S));}catch(e){}
           // 同步云端用户配置到全局变量（每天目标/元每分钟/约定），否则其他设备拉到云端值也显示不出来
           if(S.dailyTargetMins!=null){dailyTargetMins=Math.max(0,Number(S.dailyTargetMins)||0);try{localStorage.setItem(dailyKey(),String(dailyTargetMins));}catch(e){}}
           if(S.yuanPerMin!=null){yuanPerMin=Math.max(0,Number(S.yuanPerMin)||0);try{localStorage.setItem(yuanKey(),String(yuanPerMin));}catch(e){}}

@@ -569,8 +569,8 @@ function baseUpKey(){return curStoreKey()+"_syncbase";}
 function getBaseUp(){return Number(localStorage.getItem(baseUpKey()))||0;}
 function setBaseUp(v){try{localStorage.setItem(baseUpKey(),String(v));}catch(e){}}
 // 内置默认云端配置：新机器第一次打开网页即可直接连接，无需手动填写
-const DEFAULT_CLOUD_URL="https://vajgltnfpdjpnsoknoma.supabase.co";
-const DEFAULT_CLOUD_KEY="sb_publishable_WkudOiZ5UwD0VhwquRsUBA_LkBhSyoN";
+const DEFAULT_CLOUD_URL="https://mixuqjognbdrafrrlivc.supabase.co";
+const DEFAULT_CLOUD_KEY="sb_publishable_D0ha7g4X4LutG-3hxCguSA_pwyQLrVX";
 function defaultCloudCfg(){return {url:DEFAULT_CLOUD_URL,key:DEFAULT_CLOUD_KEY,disabled:false};}
 let cloudReady=false,cloudStatus='off',cloudCfg=defaultCloudCfg(),syncTimer=null;
 // 兼容两种粘贴格式：基地址(https://xxx.supabase.co) 或 带 /rest/v1/ 的完整地址
@@ -578,16 +578,19 @@ function sbBase(u){return (u||"").replace(/\/rest\/v1\/?$/,"").replace(/\/+$/,""
 // Supabase 新版 publishable key 不是 JWT，不能放 Authorization: Bearer；旧版 anon key 是 eyJ... JWT，需要 Bearer。
 function sbHeaders(key,contentType){
   const h={'apikey':key};
-  if(typeof key==='string'&&key.startsWith('eyJ')){
-    h['Authorization']='Bearer '+key;
-  }
+  /* 新旧 key 都加 Bearer（旧 anon JWT eyJ 开头；新 publishable key sb_publishable_ 开头），缺头可能 401 */
+  if(typeof key==='string'&&key)h['Authorization']='Bearer '+key;
   if(contentType)h['Content-Type']='application/json';
   return h;
 }
 function loadCloudCfg(){
   try{
     const c=JSON.parse(localStorage.getItem(CLOUD_CFG_KEY)||"null");
-    if(c&&c.url&&c.key)return c;
+    /* 2026-09-04 账号迁移：旧库 vajgltnfpdjpnsoknoma egress 超限封禁弃用 → 设备残留旧配置则丢弃，回落新默认 */
+    if(c&&c.url&&c.key){
+      if(c.url.indexOf("vajgltnfpdjpnsoknoma")>=0){localStorage.removeItem(CLOUD_CFG_KEY);return defaultCloudCfg();}
+      return c;
+    }
   }catch(e){}
   return defaultCloudCfg();
 }
@@ -595,7 +598,7 @@ function saveCloudCfg(c){try{localStorage.setItem(CLOUD_CFG_KEY,JSON.stringify(c
 function cloudStatusText(){return {off:"未启用（仅本机）",connecting:"连接中…",online:"已连接 · 共享中",error:"连接失败（检查 URL 或 Key）"}[cloudStatus]||cloudStatus;}
 function startSyncLoop(){
   if(syncTimer)clearInterval(syncTimer);
-  syncTimer=setInterval(()=>{pullCloud(false);},20000);
+  syncTimer=setInterval(()=>{pullCloud(false);},60000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)pullCloud(false);});
 }
 function renderMineSafe(){if(curTab==="mine")render();}
@@ -651,6 +654,14 @@ function sameData(a,b){
 async function pullCloud(silent, force){
   if(!cloudCfg||!cloudCfg.url||!cloudCfg.key)return;
   if(cloudCfg.disabled)return;
+  /* egress 优化：非强制拉取先探针，云端不比本地新则跳过全量；探针失败(null)降级全量保可用 */
+  if(!force){
+    try{
+      const meta=await fetchCloudMeta();
+      const metaUp=meta?new Date(meta).getTime()||0:0;
+      if(meta!==null&&metaUp<=(S&&S.updatedAt?S.updatedAt:0))return;
+    }catch(e){}
+  }
   try{
     const url=`${sbBase(cloudCfg.url)}/rest/v1/${CLOUD_TABLE}?id=eq.${curCloudId()}&select=*`;
     const headers=sbHeaders(cloudCfg.key);
